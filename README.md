@@ -16,7 +16,7 @@ Whilst Datastor can equate to a simple 2D table of rows and columns, it also has
 
 |Datastor Type | Description | Type Requirements |
 |--------------|-------------|-------------------|
-|Table         | The datastor holds a simple 2D table of data with Rows and Columns | id() -> returns a unique ID for this value.  write(Writer) -> will serialize the Type to the writer. read(Reader) -> will deserialize the Type from the writer |
+|Table         | The datastor holds a simple 2D table of data with Rows and Columns | id() -> returns a unique ID for this value.<br>  write(Writer) -> will serialize the Type to the writer. <br>read(Reader) -> will deserialize the Type from the writer |
 |Tree          | The datastor holds a tree structure of Types. | parent() -> returns the unique ID for the parent of this node in the tree. |
 |Timeseries    | The datastor holds timeseries/audit trail info associated with changes to the state of a type | timestamp() -> returns a unique key to label this row. This could be a real timestamp, or it could be something like "turn number", etc |
 
