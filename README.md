@@ -9,6 +9,15 @@ Intended use is for:
 
 Datastor requires you to _provide your own serializer_ to read and write objects.
 
+## DANGER ZONE
+
+This code - and this README, are purely speculative at this point.
+
+I will be rewriting the README a dozen times, as the API evolves, and code starts to work.
+
+Feel free to follow along of course ... but its going to take time before I can post anything useful on this.
+
+
 ## What it does
 
 Datastor.zig provides an "Object Persistence" API for collections of Types, as pure Zig code.
