@@ -10,6 +10,11 @@ const Cat = struct {
 
     const Self = @This();
 
+    pub fn free(self: *Self, allocator: std.mem.Allocator) void {
+        allocator.free(self.breed);
+        allocator.free(self.color);
+    }
+
     // datastor doesnt need this, but its put here as a util function to print out a Cat
     pub fn format(cat: Self, comptime layout: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
@@ -30,7 +35,10 @@ const cats = [_]Cat{
 };
 
 // An example of a datastor on a simple 2D table
-pub fn run() !void {
+pub fn simple_table() !void {
+    // remove the original data file
+    std.os.unlink("db/cats.db") catch {};
+
     const gpa = std.heap.page_allocator;
     std.debug.print("Cats example - simple 2D data structure\n", .{});
 
@@ -51,5 +59,5 @@ pub fn run() !void {
     }
 
     // Save the CatsDB to disk
-    try CatDB.save("cats.db");
+    try CatDB.save("db/cats.db");
 }

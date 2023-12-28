@@ -4,5 +4,5 @@ const cats = @import("cats.zig");
 pub fn main() !void {
     std.debug.print("Datastor examples\n", .{});
 
-    try cats.run();
+    try cats.simple_table();
 }
