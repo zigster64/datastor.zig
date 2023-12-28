@@ -6,4 +6,5 @@ pub fn main() !void {
 
     try cats.create_simple_table();
     try cats.load_simple_table();
+    try cats.create_timeseries();
 }
