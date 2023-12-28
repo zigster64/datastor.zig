@@ -53,8 +53,11 @@ In concept, A Datastor is a light comptime wrapper around your struct, that prov
 - Handles memory management nicely, so you can load / save / re-load data as much as you like, and let the library manage the allocations and frees
 - Handles Tree structured data, so you can optionally overlay a heirachy on top of your collection (using a parent_key field)
 
-## Future Goals 
+## Missing Features / Future Goals 
 
+- Be able to change the type of the KEY field from `usize` to - anything.
+- Add automatic UUID stamps for all entities
+- Add the ability to pass functions so you can do `map/filter/reduce` type ops on the Datastor contents
 - Add something like a `datastor.zig.zon` file in a directory to allow some logical grouping of datastors into a larger DB schema
 - Data version management & migration updates 
 - Be able to load and save objects in S2S binary format to HTTP endpoints / S3 style cloud storage 
