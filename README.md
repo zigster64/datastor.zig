@@ -100,13 +100,13 @@ For Static-only data :
 | Table(comptime T:type) |  Returns a Table object that wraps a collection of (struct) T<br><br>T must have a field named `key:usize` that uniquely identifies the record<br>T must have a function `free()` if it contains fields that are allocated on load (such as strings) | 
 | table.init(Allocator, filename: []const u8) | Initialises the Table |
 | table.deinit()                              | Free any memory resources consumed by the Table |
-|
+| | |
 | table.load() !void                          | Explicitly load the collection from disk |
 | table.save() !void                          | Explicitly save the data to disk |
-|
+| | |
 | table.values() []T                          | Returns a slice of all the values in the Table |
 | table.get(key) ?T                           | Gets the element of type T, with the given KEY (or null if not found) |
-|
+| | |
 | table.append(T)                             | Appends new element of type T to the Table. Does not write to disk yet | 
 | table.appendAutoIncrement(T)                | Appends new element of type T to the Table, setting the KEY of the element to the next in sequence. Does not write to disk yet | 
 
@@ -117,24 +117,24 @@ For Static + Timeseries data :
 | TableWithTimeseries(comptime T:type, comptime EventT: type) |  Returns a Table object that wraps a collection of (struct) T, with an unlimited array of EventT events attached<br><br>T must have a field named `key:usize` that uniquely identifies the record<br>T must have a function `free()` if it contains fields that are allocated on load (such as strings)<br><br>EventT must have a field named `parent_key:usize` and `timestamp:i64` | 
 | table.init(Allocator, table_filename: []const u8, event_filename: []const u8) | Initialises the Table  |
 | table.deinit()                              | Free any memory resources consumed by the Table |
-|
+| | |
 | table.load() !void                          | Explicitly load the collection from disk |
 | table.save() !void                          | Explicitly save the data to disk |
-|
+| | |
 | table.values() []T                          | Returns a slice of all the values in the Table |
 | table.get(key) ?T                           | Gets the element of type T, with the given KEY (or null if not found) |
-|
+| | |
 | table.append(T)                             | Appends new element of type T to the Table. Does not write to disk yet | 
 | table.appendAutoIncrement(T)                | Appends new element of type T to the Table, setting the KEY of the element to the next in sequence. Does not write to disk yet | 
-|
+| | |
 | table.eventCount() usize                    | How many events all up ? |
 | table.eventCountFor(key: usize) usize       | How many events for the given element ?|
-|
+| | |
 | table.getAllEvents() []EventT               | Get all the events for all elements in this datastor, in timestamp order |
 | table.getEventsBetween(from, to: i64) ArrayList(EventT) | Get an ArrayList of all events between to 2 timestamps. Caller owns the list and must `deinit()` after use |
 | table.getEventsFor(key: usize) ArrayList(EventT) | Get an ArrayList for all events asssociated with this element in the datastor. Caller owns the List and must `deinit()` after use |
 | table.getEventsForBetween(key: usize, from, to: i64) ArrayList(EventT) | Get an ArrayList of all events for element matching KEY, between to 2 timestamps. Caller owns the list and must `deinit()` after use |
-|
+| | |
 | table.addEvent(event)                       | Add the given event to the collection. Will append to disk as well as update the events in memory |
 | table.latestEvent(key: usize)               | Get the latest event for element matching KEY |
 | table.eventAt(key: usize, timestamp: i64)   | Get the state of the element matching KEY at the given timestamp. Will return the event that is on or before the given timestamp |
