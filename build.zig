@@ -9,12 +9,20 @@ pub fn build(b: *std.Build) void {
     });
 
     // setup executable
-    const exe = b.addExecutable(.{
-        .name = "datastor.zig demo",
+    const example_exe = b.addExecutable(.{
+        .name = "datastor_example",
         .root_source_file = .{ .path = "example/main.zig" },
         .target = target,
         .optimize = optimize,
     });
-    exe.addModule("datastor", datastor_module);
-    b.installArtifact(exe);
+    example_exe.addModule("datastor", datastor_module);
+    b.installArtifact(example_exe);
+
+    const run_example = b.addRunArtifact(example_exe);
+    run_example.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_example.addArgs(args);
+    }
+    const run_step = b.step("run", "Run the example app");
+    run_step.dependOn(&run_example.step);
 }
