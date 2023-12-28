@@ -21,26 +21,24 @@ const Cat = struct {
     }
 };
 
+// Some seed data to boot up the cats datastore
+const cats = [_]Cat{
+    .{ .breed = "Siamese", .color = "white", .length = 30, .aggression = 0.7 },
+    .{ .breed = "Burmese", .color = "grey", .length = 24, .aggression = 0.6 },
+    .{ .breed = "Tabby", .color = "striped", .length = 32, .aggression = 0.5 },
+    .{ .breed = "Bengal", .color = "tiger stripes", .length = 40, .aggression = 0.9 },
+};
+
 // An example of a datastor on a simple 2D table
 pub fn run() !void {
+    const gpa = std.heap.page_allocator;
     std.debug.print("Cats example - simple 2D data structure\n", .{});
 
-    // define some cats data
-    const cats = [_]Cat{
-        .{ .breed = "Siamese", .color = "white", .length = 30, .aggression = 0.7 },
-        .{ .breed = "Burmese", .color = "grey", .length = 24, .aggression = 0.6 },
-        .{ .breed = "Tabby", .color = "striped", .length = 32, .aggression = 0.5 },
-        .{ .breed = "Bengal", .color = "tiger stripes", .length = 40, .aggression = 0.9 },
-    };
-    std.debug.print("Using static cats data:\n{s}\n", .{cats});
-
     // create a datastor to store the cats
-    const gpa = std.heap.page_allocator;
-
     var CatDB = datastor.Table(Cat).init(gpa);
     defer CatDB.deinit();
 
-    // manually fill in datastor using our example cats data, autoincrementing the ID
+    // manually fill in datastor using our example cats seed data, autoincrementing the ID
     for (cats) |cat| {
         try CatDB.appendAutoIncrement(cat);
     }
@@ -53,6 +51,5 @@ pub fn run() !void {
     }
 
     // Save the CatsDB to disk
-    try CatDB.saveTxt("cats.txt");
     try CatDB.save("cats.db");
 }
