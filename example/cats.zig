@@ -10,7 +10,7 @@ const Cat = struct {
 
     const Self = @This();
 
-    pub fn free(self: *Self, allocator: std.mem.Allocator) void {
+    pub fn free(self: Self, allocator: std.mem.Allocator) void {
         allocator.free(self.breed);
         allocator.free(self.color);
     }
@@ -35,29 +35,61 @@ const cats = [_]Cat{
 };
 
 // An example of a datastor on a simple 2D table
-pub fn simple_table() !void {
+pub fn create_simple_table() !void {
     // remove the original data file
     std.os.unlink("db/cats.db") catch {};
 
     const gpa = std.heap.page_allocator;
-    std.debug.print("Cats example - simple 2D data structure\n", .{});
+    std.debug.print("------------------------------------------------\n", .{});
+    std.debug.print("\nCats example - save simple data set to table\n\n", .{});
 
     // create a datastor to store the cats
     var CatDB = datastor.Table(Cat).init(gpa);
     defer CatDB.deinit();
 
     // manually fill in datastor using our example cats seed data, autoincrementing the ID
+    // deliberately create a new cat on the heap, duplicating all its components
     for (cats) |cat| {
-        try CatDB.appendAutoIncrement(cat);
+        try CatDB.appendAutoIncrement(Cat{
+            .breed = try gpa.dupe(u8, cat.breed),
+            .color = try gpa.dupe(u8, cat.color),
+            .length = cat.length,
+            .aggression = cat.aggression,
+        });
     }
 
     // manually get some cats from the datastore
     for (0..4) |i| {
-        if (CatDB.values.get(i + 1)) |cat| {
+        if (CatDB.get(i + 1)) |cat| {
             std.debug.print("Cat {d} is {s}\n", .{ i, cat });
         } else std.debug.print("No cat found !!\n", .{});
     }
 
     // Save the CatsDB to disk
     try CatDB.save("db/cats.db");
+}
+
+// An example of loading a datastor from disk
+pub fn load_simple_table() !void {
+    const gpa = std.heap.page_allocator;
+    std.debug.print("------------------------------------------------\n", .{});
+    std.debug.print("\nCats example - load simple data set from table\n\n", .{});
+
+    // create a datastor to store the cats
+    var CatDB = datastor.Table(Cat).init(gpa);
+    defer CatDB.deinit();
+
+    try CatDB.load("db/cats.db");
+    for (CatDB.list.values(), 0..) |cat, i| {
+        std.debug.print("Cat {d} is {s}\n", .{ i, cat });
+    }
+
+    std.debug.print("------------------------------------------------\n", .{});
+    std.debug.print("\nCats example - re-load simple data set from table again, freeing original\n\n", .{});
+
+    // calling load again will clear & free the original store and load a fresh new one
+    try CatDB.load("db/cats.db");
+    for (CatDB.list.values(), 0..) |cat, i| {
+        std.debug.print("Cat {d} is {s}\n", .{ i, cat });
+    }
 }

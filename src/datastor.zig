@@ -19,30 +19,42 @@ pub fn Store(comptime T: type, comptime options: Options) type {
 
     return struct {
         const Self = @This();
+        const ListType = std.AutoArrayHashMap(usize, T);
         allocator: Allocator,
-        values: std.AutoArrayHashMap(usize, T),
+        list: ListType,
 
         pub fn init(allocator: Allocator) Self {
             return .{
                 .allocator = allocator,
-                .values = std.AutoArrayHashMap(usize, T).init(allocator),
+                .list = ListType.init(allocator),
             };
         }
 
+        fn freeItems(self: *Self) void {
+            for (self.list.values()) |value| {
+                value.free(self.allocator);
+            }
+        }
+
         pub fn deinit(self: *Self) void {
-            self.values.deinit();
+            self.freeItems();
+            self.list.deinit();
         }
 
         // append a value, autoincrementing the key field
         pub fn appendAutoIncrement(self: *Self, value: T) !void {
             var v = value; // mutable local copy, because we store a modification of the original
-            v.key = self.values.count() + 1;
-            try self.values.put(v.key, v);
+            v.key = self.list.count() + 1;
+            try self.list.put(v.key, v);
         }
 
         // append a value, using the supplied key value
         pub fn append(self: *Self, value: T) !void {
-            try self.values.put(value.key, value);
+            try self.list.put(value.key, value);
+        }
+
+        pub fn get(self: Self, key: usize) ?T {
+            return self.list.get(key);
         }
 
         pub fn save(self: *Self, filename: []const u8) !void {
@@ -51,8 +63,26 @@ pub fn Store(comptime T: type, comptime options: Options) type {
 
             const writer = file.writer();
 
-            for (self.values.values()) |value| {
+            try s2s.serialize(writer, usize, self.list.count());
+            for (self.list.values()) |value| {
                 try s2s.serialize(writer, T, value);
+            }
+        }
+
+        pub fn load(self: *Self, filename: []const u8) !void {
+            const file = try std.fs.cwd().openFile(filename, .{});
+            const reader = file.reader();
+
+            // clean out and free the old list before loading / allocating a new one
+            self.freeItems();
+            self.list.clearAndFree();
+
+            const count = try s2s.deserialize(reader, usize);
+            for (0..count) |i| {
+                _ = i;
+
+                const value = try s2s.deserializeAlloc(reader, T, self.allocator);
+                try self.append(value);
             }
         }
     };
