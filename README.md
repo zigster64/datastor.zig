@@ -1,13 +1,25 @@
 # datastor.zig
 
-Data persistence layer for Zig
+Fast & Light Data persistence layer for Zig
 
 Intended use is for:
 
 - Object persistence in a typical game world setting
 - A fast local data storage and retrieval system for edge / IoT devices
+- Direct disk I/O, no need to talk to a DB server over the wire
+- Thread safe for use in a single process
+- Optimized for both Static and Timeseries data
+- Easy to init parts of your data using arrays of values in your code, in addition to other sources
 
-Datastor requires you to _provide your own serializer_ to read and write objects.
+Not intended for :
+
+- Scalable, multi-process database backends.
+- General Purpose data persistence. Datastor has a highly opinionated approach to dealing with Static vs Timeseries data
+
+On disk format uses S2S format for object storage
+(see https://github.com/ziglibs/s2s)
+
+S2S is battle tested code, but it does lack a features that may or may not be a problem for your code.
 
 ## DANGER ZONE
 
@@ -17,28 +29,63 @@ I will be rewriting the README a dozen times, as the API evolves, and code start
 
 Feel free to follow along of course ... but its going to take time before I can post anything useful on this.
 
+## Version Log
+
+Dec 2023 - v0.0.0 - init project
+Jan 2024 - v0.1.0 - TBD
+
 
 ## What it does
 
-Datastor.zig provides an "Object Persistence" API for collections of Types, as pure Zig code.
+Datastor.zig provides an embedded "Object Persistence" API for collections of Types, in pure Zig.
 
-The Datastor is designed to be used for loading / saving application state information from disk into in-memory representations. 
+No external DB dependencies, and no DLLs needed.
 
-You use this in your app, as Zig code, so your resultant executable has no runtime deps on any special DLLs or Database servers.
+In concept, Datastor is a wrapper around an ordered Hash Map for the Static part of the data, and an ArrayList for the event part of the data ... but 
+with automated synch to and from disk for operations on those collections.
 
-Each Datastor is the equivalent of a "Table" in an SQL database, and is backed by a single file on disk. Each row in the table holds 1 Zig type (which could be a simple value, or a struct)
+The Timeseries / Events data are associated with each element of Static data, and include handy API functions to get the state at a point in time, or a list
+of events over a period of time, etc.
 
-Whilst Datastor can equate to a simple 2D table of rows and columns, it also has other forms :
-
-|Datastor Type | Description | Type Requirements |
-|--------------|-------------|-------------------|
-|Table         | The datastor holds a simple 2D table of data with Rows and Columns | id() -> returns a unique ID for this value.<br>  write(Writer) -> will serialize the Type to the writer. <br>read(Reader) -> will deserialize the Type from the writer |
-|Tree          | The datastor holds a tree structure of Types. | parent() -> returns the unique ID for the parent of this node in the tree. |
-|Timeseries    | The datastor holds timeseries/audit trail info associated with changes to the state of a Table entry | timestamp() -> returns a unique key to label this row. This could be a real timestamp, or it could be something like "turn number", etc |
 
 ## Intial State information vs State Transitions
 
-Unlike common datastores such as SQL ... Datastor distinguishes between initial (and static) State information, vs State Transitions over time.
+Datastor takes a highly opinionated approach to separating data persistence between "Static" data, and "Timeseries" data.
+
+Static data is for :
+- TODO list of attributes of static data
+- Static data is explicitly loaded and saved to and from disk using functions `table.load()` and `table.save()`
+
+Timeseries data is for :
+- TODO list of attributes of timeseries data
+- Timeseries data is explicitly loaded on `table.load()`, and automatically appended to disk on `table.addEvent(Event)`
+
+
+The API considers that the initial state of an Item, and its collection of events over time, form a single Coherent Entity with a single logical API.
+
+On disk, its splits these into 2 files - 1 file for the initial Static data, that is rarely (if ever) updated, and 1 other file for the timeseries / event 
+data, that is frequently appended to.
+
+The Datastor API then wraps this as a single storage item.
+
+## API Overview
+
+For Static-only data :
+
+| Function | Description |
+|----------|-------------|
+| Table(comptime T:type) |  Returns a Table object that wraps a collection of (struct) T<br><br>T must have a field named `key:usize` that uniquely identifies the record<br>T must have a function `free()` if it contains fields that are allocated on load (such as strings) | 
+| table.init(Allocator, filename: []const u8) | Initialises the Table |
+| table.deinit()                              | Free any memory resources consumed by the Table |
+|
+| table.load() !void                          | Explicitly load the collection from disk |
+| table.save() !void                          | Explicitly save the data to disk |
+|
+| table.values() []T                          | Returns a slice of all the values in the Table |
+| table.get(key) ?T                           | Gets the element of type T, with the given KEY (or null if not found) |
+|
+| table.append(T)                             | Appends new element of type T to the Table. Does not write to disk yet | 
+| table.appendAutoIncrement(T)                | Appends new element of type T to the Table, setting the KEY of the element to the next in sequence. Does not write to disk yet | 
 
 
 ## Performance Expectations and Design of your Data
