@@ -13,7 +13,7 @@ Intended use is for:
 Not intended for :
 
 - Scalable, multi-process database backends.
-- General Purpose data persistence. Datastor has a highly opinionated approach to dealing with Static vs Timeseries data
+- General Purpose data persistence. Datastor has a highly opinionated approach to dealing with Static vs Timeseries data. That may not suit the way your data is structured.
 - Current data format uses native `usize` quite a bit, so the datafiles are not 100% portable between machines with different word sizes.
 
 On disk format uses S2S format for object storage
