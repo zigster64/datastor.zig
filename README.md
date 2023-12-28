@@ -9,19 +9,20 @@ Intended use is for:
 - Direct disk I/O, no need to talk to a DB server over the wire
 - Thread safe for use in a single process
 - Optimized for both Static and Timeseries data
-- Easy to init parts of your data using arrays of values in your code, in addition to other sources
 
 Not intended for :
 
 - Scalable, multi-process database backends.
 - General Purpose data persistence. Datastor has a highly opinionated approach to dealing with Static vs Timeseries data
+- Current data format uses native `usize` quite a bit, so the datafiles are not 100% portable between machines with different word sizes.
 
 On disk format uses S2S format for object storage
 (see https://github.com/ziglibs/s2s)
 
-S2S is battle tested code, but it does lack a features that may or may not be a problem for your code.
+S2S is battle tested code, but it does lack a few types that it can serialize out of the box. You can code around this
+easy enough, but its something you should be aware of.
 
-## DANGER ZONE
+## *** DANGER ZONE ***
 
 This code - and this README, are purely speculative at this point.
 
@@ -31,22 +32,41 @@ Feel free to follow along of course ... but its going to take time before I can 
 
 ## Version Log
 
-Dec 2023 - v0.0.0 - init project
-Jan 2024 - v0.1.0 - TBD
+- Dec 2023 - v0.0.0 - init project
+- Jan 2024 - v0.1.0 - TBD
 
 
-## What it does
+## Project Scope - What it does
 
-Datastor.zig provides an embedded "Object Persistence" API for collections of Types, in pure Zig.
+Datastor.zig provides an embedded "Object Persistence" API for collections of Zig Types.
 
 No external DB dependencies, and no DLLs needed.
 
-In concept, Datastor is a wrapper around an ordered Hash Map for the Static part of the data, and an ArrayList for the event part of the data ... but 
-with automated synch to and from disk for operations on those collections.
+In concept, A Datastor is a light comptime wrapper around your struct, that provides :
 
-The Timeseries / Events data are associated with each element of Static data, and include handy API functions to get the state at a point in time, or a list
-of events over a period of time, etc.
+- An ordered HashMap collection of elements, with a numeric SERIAL key
+- Be able to insert records, and autoincrement the key if needed
+- Functions to load / save that collection to and from disk
+- An unlimited ArrayList of Timeseries events associated with each element in the collection
+- Timeseries handy functions to get element state at a point in time / events over a period, etc
+- Automatic synch to disk as your collection data changes
+- Handles memory management nicely, so you can load / save / re-load data as much as you like, and let the library manage the allocations and frees
+- Handles Tree structured data, so you can optionally overlay a heirachy on top of your collection (using a parent_key field)
 
+## Future Goals 
+
+- Add something like a `datastor.zig.zon` file in a directory to allow some logical grouping of datastors into a larger DB schema
+- Data version management & migration updates 
+- Be able to load and save objects in S2S binary format to HTTP endpoints / S3 style cloud storage 
+- Add the ability to register clients that subscribe to event updates for a given record - need async / channels first though ??
+- Add the abliity to register user defined serializers on a per-user-struct basis (ie - if `serialize()` exists on the struct, then use it)
+- Ability to shard datastors that may get very large
+- Import / Export to and from Excel / CSV / JSON formats
+
+## Future Goals - UI support
+
+- Add a generic web based Datastor viewer (Zig app that spawns a local web server - navigate through stores, render datastor contents, etc)
+- Add a generic Native UI app (Zig app using libui-ng tables)
 
 ## Intial State information vs State Transitions
 
@@ -87,23 +107,34 @@ For Static-only data :
 | table.append(T)                             | Appends new element of type T to the Table. Does not write to disk yet | 
 | table.appendAutoIncrement(T)                | Appends new element of type T to the Table, setting the KEY of the element to the next in sequence. Does not write to disk yet | 
 
+For Static + Timeseries data :
 
-## Performance Expectations and Design of your Data
-
-On init, Datastor Table and Tree objects will read the entire file from disk, and create an in-memory, ordered HashMap of the data.
-
-It is expected that your application will then use this in-memory representation once the data is loaded is from disk. Unlike - say SQL, where
-the application makes a call to SELECT FROM TABLE everytime a lookup is needed.
-
-On write, the entire Datastor Table or Tree is re-written to disk. Therefore, design your usage of this so that only static (or rarely updated) state information is held in 
-a Table or Tree.
-
-For state information that changes frequently, use the Timeseries Datastor to record updates to state. 
-
-Each Timeseries Datastor is always associated with 1 static Table or Tree datastor. Use this to provide storage for any information that changes over time.
-
-Timeseries Datator writes are fast, append-only updates that write 1 record at a time, and are suitable for persisting high frequency updates to state information.
-
+| Function | Description |
+|----------|-------------|
+| TableWithTimeseries(comptime T:type, comptime EventT: type) |  Returns a Table object that wraps a collection of (struct) T, with an unlimited array of EventT events attached<br><br>T must have a field named `key:usize` that uniquely identifies the record<br>T must have a function `free()` if it contains fields that are allocated on load (such as strings)<br><br>EventT must have a field named `parent_key:usize` and `timestamp:i64` | 
+| table.init(Allocator, table_filename: []const u8, event_filename: []const u8) | Initialises the Table  |
+| table.deinit()                              | Free any memory resources consumed by the Table |
+|
+| table.load() !void                          | Explicitly load the collection from disk |
+| table.save() !void                          | Explicitly save the data to disk |
+|
+| table.values() []T                          | Returns a slice of all the values in the Table |
+| table.get(key) ?T                           | Gets the element of type T, with the given KEY (or null if not found) |
+|
+| table.append(T)                             | Appends new element of type T to the Table. Does not write to disk yet | 
+| table.appendAutoIncrement(T)                | Appends new element of type T to the Table, setting the KEY of the element to the next in sequence. Does not write to disk yet | 
+|
+| table.eventCount() usize                    | How many events all up ? |
+| table.eventCountFor(key: usize) usize       | How many events for the given element ?|
+|
+| table.getAllEvents() []EventT               | Get all the events for all elements in this datastor, in timestamp order |
+| table.getEventsBetween(from, to: i64) ArrayList(EventT) | Get an ArrayList of all events between to 2 timestamps. Caller owns the list and must `deinit()` after use |
+| table.getEventsFor(key: usize) ArrayList(EventT) | Get an ArrayList for all events asssociated with this element in the datastor. Caller owns the List and must `deinit()` after use |
+| table.getEventsForBetween(key: usize, from, to: i64) ArrayList(EventT) | Get an ArrayList of all events for element matching KEY, between to 2 timestamps. Caller owns the list and must `deinit()` after use |
+|
+| table.addEvent(event)                       | Add the given event to the collection. Will append to disk as well as update the events in memory |
+| table.latestEvent(key: usize)               | Get the latest event for element matching KEY |
+| table.eventAt(key: usize, timestamp: i64)   | Get the state of the element matching KEY at the given timestamp. Will return the event that is on or before the given timestamp |
 ## Example Datastor Design
 
 Its easiest to explain the use cases in terms of providing object persistence for a game world here ... but you can easily also imagine 
@@ -157,30 +188,23 @@ Now that our data is organised, as above, into Tables, Trees & Timeseries data .
 ```
 // Define a struct to hold a Place
 Place = struct {
-  id: u8,
+  key: usize,
   name: []u8,
   x: u16,
   y: u16,
   gold: u16,
-  
-  pub fn id(self: @This()) u8 {
-    return self.id;
-  }
 
-  // roll your own serializer !!
-  pub fn write(self: @This(), writer: anytype) !void {
-      .. serialize to writer
+  pub fn free(self: @This(), allocator: Allocator) void {
+    allocator.free(name);
   }
-  pub fn read(self: @This(), allocator: Allocator, reader: anytype) !void {
-      .. deserialize from reader
-  }
+  
 }
 
 // Define a datastor of Places
-places = datastor(Place).init(allocator, .{.Table, .Static}); 
+places = datastor(Place).init(allocator, "data/places.db");
 
 // Load the places datastor from disk
-try places.load("data/place");
+try places.load();
 
 // Lookup the details of a place .. with ID 7
 const place = try places.get(7);
@@ -188,71 +212,3 @@ const place = try places.get(7);
 // place is now filled in with the values for place 7
 ```
 
-- Get information on a Monster
-
-```
-// Define a struct to hold a Monster
-Monster = struct {
-  id: u8,
-  name: []u8,
-  x: u16,
-  y: u16,
-  attack_value: u16,
-  hit_points: u16,
-  gold: u16,
-  events: []Event,
-  const Self = @This();
-  
-  pub fn id(self: Self) u8 {
-    return self.id;
-  }
-
-  // roll your own serializer !!
-  pub fn write(self: Self, writer: anytype) !void {
-      .. serialize to writer
-  }
-  pub fn read(self: Self, allocator: Allocator, reader: anytype) !void {
-      .. deserialize from reader
-  }
-  pub fn event(self: Self) ?Event {
-     .. return the most recernt event
-  }
-  pub fn addEvent(self: Self, event: Event) !void {
-     .. add a new event to the arary of events
-  }
-
-  // define the timeseries events for each monster
-  const Event = struct {
-    turn: u16,
-    x: u16,
-    y: u16,
-    hit_points: u16,
-    gold: u16,
-
-    // roll your own serializer !!
-    pub fn write(self: @This(), writer: anytype) !void {
-        .. serialize to writer
-    }
-    pub fn read(self: @This(), allocator: Allocator, reader: anytype) !void {
-        .. deserialize from reader
-    }
-  }
-}
-
-// Define a datastor of Monsters
-monsters = datastor(Monster).init(allocator, .{.Table, .Events}); 
-
-// Load the monsters from disk
-try monsters.load("data/monster");
-
-// Lookup the details of a monster .. with ID 21
-const place = try places.get(7);
-
-// place is now filled in with the values for place 7
-```
-
-## Column Types
-
-## Installation and Usage
-
-## API reference

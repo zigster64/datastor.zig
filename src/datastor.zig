@@ -156,6 +156,16 @@ pub fn TableWithTimeseries(comptime T: type, comptime E: type) type {
             return self.events.items.len;
         }
 
+        pub fn eventCountFor(self: *Self, key: usize) usize {
+            var i: usize = 0;
+            for (self.events.items) |event| {
+                if (event.parent_key == key) {
+                    i += 1;
+                }
+            }
+            return i;
+        }
+
         pub fn getAllEvents(self: *Self) []E {
             return self.events.items;
         }
