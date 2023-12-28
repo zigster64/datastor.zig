@@ -39,14 +39,14 @@ pub fn Table(comptime T: type) type {
         }
 
         // append a value, autoincrementing the key field
-        pub fn appendAutoIncrement(self: *Self, value: T) !void {
+        pub fn append(self: *Self, value: T) !void {
             var v = value; // mutable local copy, because we store a modification of the original
             v.key = self.list.count() + 1;
             try self.list.put(v.key, v);
         }
 
         // append a value, using the supplied key value
-        pub fn append(self: *Self, value: T) !void {
+        pub fn put(self: *Self, value: T) !void {
             try self.list.put(value.key, value);
         }
 
@@ -129,17 +129,16 @@ pub fn TableWithTimeseries(comptime T: type, comptime E: type) type {
         }
 
         // append a value, autoincrementing the key field
-        pub fn appendAutoIncrement(self: *Self, value: T) !void {
-            return self.table.appendAutoIncrement(value);
-        }
-
-        // append a value, using the supplied key value
         pub fn append(self: *Self, value: T) !void {
             return self.table.append(value);
         }
 
         pub fn get(self: Self, key: usize) ?T {
             return self.table.get(key);
+        }
+
+        pub fn put(self: *Self, value: T) !void {
+            try self.list.put(value.key, value);
         }
 
         pub fn save(self: *Self) !void {

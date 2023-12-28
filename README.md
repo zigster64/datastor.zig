@@ -9,18 +9,23 @@ Intended use is for:
 - Direct disk I/O, no need to talk to a DB server over the wire
 - Thread safe for use in a single process
 - Optimized for both Static and Timeseries data
+- Static data that may be updated on rare occassions
+- Situations where using an external DB are definitely overkill
 
 Not intended for :
 
 - Scalable, multi-process database backends.
 - General Purpose data persistence. Datastor has a highly opinionated approach to dealing with Static vs Timeseries data. That may not suit the way your data is structured.
 - Current data format uses native `usize` quite a bit, so the datafiles are not 100% portable between machines with different word sizes.
+- Static datasets that grow, shrink, or change often.
+
 
 On disk format uses S2S format for object storage
 (see https://github.com/ziglibs/s2s)
 
 S2S is battle tested code, but it does lack a few types that it can serialize out of the box. You can code around this
 easy enough, but its something you should be aware of.
+
 
 ## *** DANGER ZONE ***
 
@@ -107,7 +112,8 @@ For Static-only data :
 | table.values() []T                          | Returns a slice of all the values in the Table |
 | table.get(key) ?T                           | Gets the element of type T, with the given KEY (or null if not found) |
 | | |
-| table.append(T)                             | Appends new element of type T to the Table. Does not write to disk yet | 
+| table.append(T)                             | Appends new element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
+| table.put(T)                                | Add or overwrite element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
 | table.appendAutoIncrement(T)                | Appends new element of type T to the Table, setting the KEY of the element to the next in sequence. Does not write to disk yet | 
 
 For Static + Timeseries data :
@@ -124,7 +130,8 @@ For Static + Timeseries data :
 | table.values() []T                          | Returns a slice of all the values in the Table |
 | table.get(key) ?T                           | Gets the element of type T, with the given KEY (or null if not found) |
 | | |
-| table.append(T)                             | Appends new element of type T to the Table. Does not write to disk yet | 
+| table.append(T)                             | Appends new element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
+| table.put(T)                                | Add or overwrite element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
 | table.appendAutoIncrement(T)                | Appends new element of type T to the Table, setting the KEY of the element to the next in sequence. Does not write to disk yet | 
 | | |
 | table.eventCount() usize                    | How many events all up ? |
@@ -181,37 +188,51 @@ The Henchman case is a bit more subtle.
 In the Henchman datastor tree, we may have hired the Captain of a band of 10 Brigands. However, each individual Henchman also has a single record in the Henchman datastor
 with it's own unique ID. In the Henchman.Event table, every single Henchman has 1 array of turn-by-turn audit records.
 
-
-## Design impacts on Data Retrieval
-
-Now that our data is organised, as above, into Tables, Trees & Timeseries data ... lets have a look at what we can do, and how the code looks like
-
-- Get information on a Place
+## Example - define a struct that can be used as a Datastor
 
 ```
-// Define a struct to hold a Place
-Place = struct {
-  key: usize,
-  name: []u8,
-  x: u16,
-  y: u16,
-  gold: u16,
+const Cat = struct {
+    key: usize = 0,
+    breed: []const u8,
+    color: []const u8,
+    length: u16,
+    aggression: f32,
 
-  pub fn free(self: @This(), allocator: Allocator) void {
-    allocator.free(name);
-  }
-  
+    const Self = @This();
+
+    pub fn free(self: Self, allocator: std.mem.Allocator) void {
+        allocator.free(self.breed);
+        allocator.free(self.color);
+    }
 }
+```
 
-// Define a datastor of Places
-places = datastor(Place).init(allocator, "data/places.db");
+## Example - Load a Datastor based on our Cat struct
 
-// Load the places datastor from disk
-try places.load();
+```
+pub fn load_simple_table() !void {
+    const gpa = std.heap.page_allocator;
 
-// Lookup the details of a place .. with ID 7
-const place = try places.get(7);
+    var catDB = try datastor.Table(Cat).init(gpa, "db/cats.db");
+    defer catDB.deinit();
+    try catDB.load();
 
-// place is now filled in with the values for place 7
+    // print out all the cats 
+    for (catDB.values() |cat| {
+        std.debug.print("Cat {d} is a {s} {s}, that is {d} inches long, with an aggression rating of {:.2f}\n", .{
+            cat.key,
+            cat.color,
+            cat.breed,
+            cat.length,
+            cat.aggression,
+        });
+    }
+
+    // update one of the cats to be more aggressive, and save the datastor
+    var my_cat = catDB.get(2) orelse return;
+    my_cat.aggression += 0.1;
+    catDB.put(my_cat);
+    catDB.save();
+}
 ```
 

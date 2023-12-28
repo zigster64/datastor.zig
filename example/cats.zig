@@ -50,7 +50,7 @@ pub fn create_simple_table() !void {
     // manually fill in datastor using our example cats seed data, autoincrementing the ID
     // deliberately create a new cat on the heap, duplicating all its components
     for (cats) |cat| {
-        try catDB.appendAutoIncrement(Cat{
+        try catDB.append(Cat{
             .breed = try gpa.dupe(u8, cat.breed),
             .color = try gpa.dupe(u8, cat.color),
             .length = cat.length,
