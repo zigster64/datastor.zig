@@ -146,49 +146,6 @@ For Static + Timeseries data :
 | table.addEvent(event)                       | Add the given event to the collection. Will append to disk as well as update the events in memory |
 | table.latestEvent(id: usize)               | Get the latest event for element matching ID |
 | table.eventAt(id: usize, timestamp: i64)   | Get the state of the element matching ID at the given timestamp. Will return the event that is on or before the given timestamp |
-## Example Datastor Design
-
-Its easiest to explain the use cases in terms of providing object persistence for a game world here ... but you can easily also imagine 
-a similar usage for an IoT device that needs fast and efficient local storage.
-
-Lets say we have a game world, where the world state has the following types of data :
-
-|Datastor Name   | Description |
-|----------------|-------------|
-|Place           | A place in our world that has a name, (x,y) coordinates, and an amount of gold to be found there |
-|Monster         | A monster in our world that has a name, (x,y) coordinates, attack value, number of hit points, amount of gold carried|
-|Henchman        | An NPC henchman in our world that has a name, (x,y) coordinates, hit points, and a cost per day to hire|
-
-So far so good, we can store each of these as a Datastor Table.
-
-Now, with our Henchmen, the problem here that they operate in a heirachy of companies. A Captain of a band of 10 henchmen for example ... who may in turn
-be a member of a Guild that employs many henchman.  We can model the Henchman datastor as a Tree in this case, allowing us to hire 1 henchman, or hire the captain
-of a team of 10, or hire an entire guild if we can afford it.
-
-Next problem we have is (x,y) coordinate locations, and hit points.
-
-The (x,y) coordinates of a 'Place' remains static throughout the game, so thats fine. 
-
-However, each monster may move around randomly in our game world, and its hit-points may go up and down as it gets involved in various activities.
-Likewise with our Henchmen, they move around, their hit-points change, and they can move in and out of availablity as they get hired by other players in our game world.
-
-We need to track all these changes to both Monsters and Henchmen, so we add 2 Timeseries datastors to track state changes :
-
-|Datastor Name     | Description |
-|------------------|-------------|
-| Monster.events   | Monster ID, Turn Number, (x,y) coordinates, hit-points, gold | 
-| Henchman.events  | Henchman ID, Turn Number, (x,y) coordinates, hit-points, hired status |
-
-
-So now, for every Monster in our game world, we have 1 static record in the "Monster" datastor that gives us the monster's starting stats, and 1 array of records
-in the Monster.Tracking timeseries datastor, linked to this Monster that provides a detailed turn-by turn audit trail of state changes to the monster as it moves
-around our world, takes damage, and accumulates gold.
-
-The Henchman case is a bit more subtle.
-
-In the Henchman datastor tree, we may have hired the Captain of a band of 10 Brigands. However, each individual Henchman also has a single record in the Henchman datastor
-with it's own unique ID. In the Henchman.Event table, every single Henchman has 1 array of turn-by-turn audit records.
-
 ## Example - define a Cat struct that can be used as a Datastor
 
 ```
@@ -408,4 +365,50 @@ total query time for all that = approx 30us (microseconds)  or 0.03ms
 
 
 
+
+
+## Example Datastor Design
+
+** TODO ** - delete or rewrite this. Its getting obsolete too quick !
+
+Its easiest to explain the use cases in terms of providing object persistence for a game world here ... but you can easily also imagine 
+a similar usage for an IoT device that needs fast and efficient local storage.
+
+Lets say we have a game world, where the world state has the following types of data :
+
+|Datastor Name   | Description |
+|----------------|-------------|
+|Place           | A place in our world that has a name, (x,y) coordinates, and an amount of gold to be found there |
+|Monster         | A monster in our world that has a name, (x,y) coordinates, attack value, number of hit points, amount of gold carried|
+|Henchman        | An NPC henchman in our world that has a name, (x,y) coordinates, hit points, and a cost per day to hire|
+
+So far so good, we can store each of these as a Datastor Table.
+
+Now, with our Henchmen, the problem here that they operate in a heirachy of companies. A Captain of a band of 10 henchmen for example ... who may in turn
+be a member of a Guild that employs many henchman.  We can model the Henchman datastor as a Tree in this case, allowing us to hire 1 henchman, or hire the captain
+of a team of 10, or hire an entire guild if we can afford it.
+
+Next problem we have is (x,y) coordinate locations, and hit points.
+
+The (x,y) coordinates of a 'Place' remains static throughout the game, so thats fine. 
+
+However, each monster may move around randomly in our game world, and its hit-points may go up and down as it gets involved in various activities.
+Likewise with our Henchmen, they move around, their hit-points change, and they can move in and out of availablity as they get hired by other players in our game world.
+
+We need to track all these changes to both Monsters and Henchmen, so we add 2 Timeseries datastors to track state changes :
+
+|Datastor Name     | Description |
+|------------------|-------------|
+| Monster.events   | Monster ID, Turn Number, (x,y) coordinates, hit-points, gold | 
+| Henchman.events  | Henchman ID, Turn Number, (x,y) coordinates, hit-points, hired status |
+
+
+So now, for every Monster in our game world, we have 1 static record in the "Monster" datastor that gives us the monster's starting stats, and 1 array of records
+in the Monster.Tracking timeseries datastor, linked to this Monster that provides a detailed turn-by turn audit trail of state changes to the monster as it moves
+around our world, takes damage, and accumulates gold.
+
+The Henchman case is a bit more subtle.
+
+In the Henchman datastor tree, we may have hired the Captain of a band of 10 Brigands. However, each individual Henchman also has a single record in the Henchman datastor
+with it's own unique ID. In the Henchman.Event table, every single Henchman has 1 array of turn-by-turn audit records.
 
