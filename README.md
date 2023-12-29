@@ -7,9 +7,12 @@ Intended use is for:
 - Object persistence in a typical game world setting
 - A fast local data storage and retrieval system for edge / IoT devices
 - Direct disk I/O, no need to talk to a DB server over the wire
+- No interruption of data IO whilst "offline"
+- Runs just fine on emebedded / ARM / Pi with tiny memory footprint
 - Thread safe for use in a single process
 - Optimized for both Static and Timeseries data
-- Static data that may be updated on rare occassions
+- Static data that may be updated occassionally only
+- Total amount of event data maxxing out at about 10,000 events per table before performance suffers (? depends on hardware)
 - Situations where using an external DB are definitely overkill
 
 Not intended for :
@@ -18,6 +21,9 @@ Not intended for :
 - General Purpose data persistence. Datastor has a highly opinionated approach to dealing with Static vs Timeseries data. That may not suit the way your data is structured.
 - Current data format uses native `usize` quite a bit, so the datafiles are not 100% portable between machines with different word sizes.
 - Static datasets that grow, shrink, or change often.
+- Handling large volumes of timeseries data
+
+For any of the "Not Intended" use cases above, best look at options such as server based PostgreSQL w/ TimeseriesDB extensions over the network.
 
 
 On disk format uses S2S format for object storage
