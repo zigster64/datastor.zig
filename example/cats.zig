@@ -2,7 +2,7 @@ const std = @import("std");
 const datastor = @import("datastor");
 
 const Cat = struct {
-    key: usize = 0,
+    id: usize = 0,
     breed: []const u8,
     color: []const u8,
     length: u16,
@@ -96,7 +96,7 @@ pub fn load_simple_table() !void {
 
 // A timeseries record of events that are associated with a cat
 const CatEvent = struct {
-    parent_key: usize = 0,
+    parent_id: usize = 0,
     timestamp: i64,
     x: u16,
     y: u16,
@@ -122,7 +122,7 @@ const CatEvent = struct {
             writer,
             "ParentID: {d} Timestamp: {d} At {d},{d}  Attacks: {any} Kills {any} Sleeps {any} Comment: {s}\n",
             .{
-                self.parent_key,
+                self.parent_id,
                 self.timestamp,
                 self.x,
                 self.y,
@@ -137,18 +137,18 @@ const CatEvent = struct {
 
 // Some seed data to boot up the cat events timeseries data
 const cat_events = [_]CatEvent{
-    .{ .parent_key = 1, .timestamp = 1, .x = 10, .y = 10, .attacks = false, .kills = false, .sleep = true, .description = "Starting Location" },
-    .{ .parent_key = 2, .timestamp = 1, .x = 20, .y = 10, .attacks = false, .kills = false, .sleep = true, .description = "Burmese Starting Location" },
-    .{ .parent_key = 3, .timestamp = 1, .x = 10, .y = 20, .attacks = false, .kills = false, .sleep = true, .description = "Tabby Starting Location" },
-    .{ .parent_key = 4, .timestamp = 1, .x = 20, .y = 20, .attacks = false, .kills = false, .sleep = true, .description = "Bengal Starting Location" },
-    .{ .parent_key = 1, .timestamp = 10, .x = 10, .y = 10, .attacks = false, .kills = false, .sleep = false, .description = "Siamese Awakes" },
-    .{ .parent_key = 1, .timestamp = 20, .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "Siamese attacks Burmese" },
-    .{ .parent_key = 2, .timestamp = 21, .x = 20, .y = 10, .attacks = false, .kills = false, .sleep = false, .description = "Burmese Awakes" },
-    .{ .parent_key = 3, .timestamp = 24, .x = 10, .y = 20, .attacks = false, .kills = false, .sleep = false, .description = "Tabby Awakes" },
-    .{ .parent_key = 2, .timestamp = 25, .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "Burmese Retaliates against Siamese" },
-    .{ .parent_key = 4, .timestamp = 30, .x = 20, .y = 20, .attacks = false, .kills = false, .sleep = false, .description = "Bengal Awakes from all the commotion" },
-    .{ .parent_key = 3, .timestamp = 35, .x = 10, .y = 20, .attacks = false, .kills = false, .sleep = true, .description = "Tabby goes back to sleep" },
-    .{ .parent_key = 4, .timestamp = 40, .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "Bengal Attacks Burmese and Siamese" },
+    .{ .parent_id = 1, .timestamp = 1, .x = 10, .y = 10, .attacks = false, .kills = false, .sleep = true, .description = "starts at Location" },
+    .{ .parent_id = 2, .timestamp = 1, .x = 20, .y = 10, .attacks = false, .kills = false, .sleep = true, .description = "starts at Location" },
+    .{ .parent_id = 3, .timestamp = 1, .x = 10, .y = 20, .attacks = false, .kills = false, .sleep = true, .description = "starts at Location" },
+    .{ .parent_id = 4, .timestamp = 1, .x = 20, .y = 20, .attacks = false, .kills = false, .sleep = true, .description = "starts at Location" },
+    .{ .parent_id = 1, .timestamp = 10, .x = 10, .y = 10, .attacks = false, .kills = false, .sleep = false, .description = "awakes" },
+    .{ .parent_id = 1, .timestamp = 20, .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "attacks Burmese" },
+    .{ .parent_id = 2, .timestamp = 21, .x = 20, .y = 10, .attacks = false, .kills = false, .sleep = false, .description = "awakes" },
+    .{ .parent_id = 3, .timestamp = 21, .x = 10, .y = 20, .attacks = false, .kills = false, .sleep = false, .description = "awakes" },
+    .{ .parent_id = 2, .timestamp = 25, .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "retaliates against Siamese" },
+    .{ .parent_id = 3, .timestamp = 29, .x = 10, .y = 20, .attacks = false, .kills = false, .sleep = true, .description = "goes back to sleep" },
+    .{ .parent_id = 4, .timestamp = 30, .x = 20, .y = 20, .attacks = false, .kills = false, .sleep = false, .description = "awakes from all the commotion" },
+    .{ .parent_id = 4, .timestamp = 40, .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "attacks Burmese and Siamese" },
 };
 
 pub fn create_timeseries() !void {
@@ -182,7 +182,7 @@ pub fn create_timeseries() !void {
     std.debug.print("\nAll cats with audit trail:\n", .{});
     for (catDB.values()) |cat| {
         std.debug.print("Cat {s}\n", .{cat});
-        const events = try catDB.getEventsFor(cat.key);
+        const events = try catDB.getEventsFor(cat.id);
         for (events.items) |event| {
             std.debug.print("  - At {d}: {s} -> moves to ({d},{d}) status: (Asleep:{any}, Attacking:{any})\n", .{ event.timestamp, event.description, event.x, event.y, event.sleep, event.attacks });
         }
@@ -191,7 +191,72 @@ pub fn create_timeseries() !void {
 
     // iterate through 3 timestamps and show the state of all cats at the given timestamp
     for (0..4) |i| {
-        const t = i * 10 + 1;
+        const t: i64 = @as(i64, @intCast(i * 10 + 1));
         std.debug.print("\nState of all cats at Timestamp {d}\n", .{t});
+        for (catDB.values()) |cat| {
+            if (catDB.eventAt(cat.id, t)) |e| {
+                std.debug.print("  - {s} {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n", .{ cat.breed, e.description, e.timestamp, e.x, e.y, e.sleep, e.attacks });
+            } else unreachable;
+        }
     }
+
+    // get the latest status for each cat
+    std.debug.print("\nCurrent state of all cats, based on latest event for each\n", .{});
+    for (catDB.values()) |cat| {
+        const e = catDB.latestEvent(cat.id).?;
+        std.debug.print("  - {s} is currently doing - {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n", .{ cat.breed, e.description, e.timestamp, e.x, e.y, e.sleep, e.attacks });
+    }
+}
+
+pub fn create_timeseries_no_io() !void {
+    // start with no timeseries data on file
+    std.os.unlink("db/cats.events") catch {};
+
+    const gpa = std.heap.page_allocator;
+
+    const t1 = std.time.microTimestamp();
+    var catDB = try datastor.TableWithTimeseries(Cat, CatEvent).init(gpa, "db/cats.db", "db/cats.events");
+    defer catDB.deinit();
+
+    // load both the base table, and all the events for all cats
+    try catDB.load();
+
+    // manually setup the timeseries events to setup the events table on disk
+    for (cat_events) |event| {
+        try catDB.addEvent(event);
+    }
+
+    const t2 = std.time.microTimestamp();
+
+    // print out all the events in timestamp order
+    for (catDB.getAllEvents()) |event| {
+        _ = event;
+    }
+
+    // now print out Cats in the datastor, along with an audit trail of events for each cat
+    for (catDB.values()) |cat| {
+        const events = try catDB.getEventsFor(cat.id);
+        for (events.items) |event| {
+            _ = event;
+        }
+        defer events.deinit();
+    }
+
+    // iterate through 3 timestamps and show the state of all cats at the given timestamp
+    for (0..4) |i| {
+        const t: i64 = @as(i64, @intCast(i * 10 + 1));
+        for (catDB.values()) |cat| {
+            if (catDB.eventAt(cat.id, t)) |e| {
+                _ = e;
+            } else unreachable;
+        }
+    }
+
+    // get the latest status for each cat
+    for (catDB.values()) |cat| {
+        const e = catDB.latestEvent(cat.id).?;
+        _ = e;
+    }
+    const t3 = std.time.microTimestamp();
+    std.debug.print("\nCreated DB and added events in {d}us\nExecuted all queries in {d}us\n", .{ t2 - t1, t3 - t2 });
 }
