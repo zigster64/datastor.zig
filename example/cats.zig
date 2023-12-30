@@ -35,7 +35,7 @@ const cats = [_]Cat{
 };
 
 // An example of a datastor on a simple 2D table
-pub fn create_simple_table() !void {
+pub fn createSimpleTable() !void {
     // remove the original data file
     std.os.unlink("db/cats.db") catch {};
 
@@ -70,7 +70,7 @@ pub fn create_simple_table() !void {
 }
 
 // An example of loading a datastor from disk
-pub fn load_simple_table() !void {
+pub fn loadSimpleTable() !void {
     const gpa = std.heap.page_allocator;
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nCats example - load simple data set from table\n\n", .{});
@@ -151,7 +151,7 @@ const cat_events = [_]CatEvent{
     .{ .parent_id = 4, .timestamp = 40, .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "attacks Burmese and Siamese" },
 };
 
-pub fn create_timeseries() !void {
+pub fn createTimeseries() !void {
     // start with no timeseries data on file
     std.os.unlink("db/cats.events") catch {};
 
@@ -208,7 +208,7 @@ pub fn create_timeseries() !void {
     }
 }
 
-pub fn create_timeseries_no_io() !void {
+pub fn createTimeseriesNoIO() !void {
     // start with no timeseries data on file
     std.os.unlink("db/cats.events") catch {};
 

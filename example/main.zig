@@ -1,11 +1,14 @@
 const std = @import("std");
 const cats = @import("cats.zig");
+const dogs = @import("dogs.zig");
 
 pub fn main() !void {
     std.debug.print("Datastor examples\n", .{});
 
-    try cats.create_simple_table();
-    try cats.load_simple_table();
-    try cats.create_timeseries();
-    try cats.create_timeseries_no_io();
+    try cats.createSimpleTable();
+    try cats.loadSimpleTable();
+    try cats.createTimeseries();
+    try cats.createTimeseriesNoIO();
+    try dogs.createSimpleTable();
+    try dogs.createTimeseries();
 }
