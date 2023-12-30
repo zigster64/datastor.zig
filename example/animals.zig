@@ -10,20 +10,32 @@ const CatEvent = cats.CatEvent;
 const Dog = dogs.Dog;
 const DogEvent = dogs.DogEvent;
 
-const AnimalType = enum { cat, dog, bird };
+const AnimalType = enum { cat, dog };
 
 const Animal = union(AnimalType) {
     const Self = @This();
 
     cat: cats.Cat,
     dog: dogs.Dog,
-    bird: void, // uncovered case
+
+    // Union types MUST have ID getters and setters for now - annoying, but Im not sure yet how to get around this
+    pub fn setID(self: *Self, id: usize) void {
+        switch (self.*) {
+            .cat => |*cat| cat.id = id,
+            .dog => |*dog| dog.id = id,
+        }
+    }
+    pub fn getID(self: Self) usize {
+        switch (self) {
+            .cat => |cat| return cat.id,
+            .dog => |dog| return dog.id,
+        }
+    }
 
     pub fn free(self: Self, allocator: Allocator) void {
         switch (self) {
-            .cat => self.cat.free(allocator),
-            .dog => self.dog.free(allocator),
-            .bird => {},
+            .cat => |cat| cat.free(allocator),
+            .dog => |dog| dog.free(allocator),
         }
     }
 };
@@ -60,6 +72,21 @@ pub fn createSimpleTable() !void {
         },
     });
 
-    animalDB.dirty = true;
     try animalDB.save();
+}
+
+pub fn loadSimpleTable() !void {
+    const gpa = std.heap.page_allocator;
+
+    std.debug.print("------------------------------------------------\n", .{});
+    std.debug.print("\nAnimals (union) example - load simple data set from disk\n\n", .{});
+
+    // create a datastor to store the animals
+    var animalDB = try datastor.Table(Animal).init(gpa, "db/animals.db");
+    defer animalDB.deinit();
+
+    try animalDB.load();
+    for (animalDB.values(), 0..) |animal, i| {
+        std.debug.print("Animal {d} is {any}:\n", .{ i, animal });
+    }
 }

@@ -50,14 +50,13 @@ pub fn Table(comptime T: type) type {
         }
 
         // getID gets the ID from the value - it understands unions
-        fn getID(self: *Self, value: T) usize {
-            _ = self;
+        fn getID(value: T) usize {
             switch (@typeInfo(T)) {
                 .Struct => |_| {
                     return value.id;
                 },
-                .Union => |u| {
-                    @compileLog("Need to look through this thing of type union", u);
+                .Union => |_| {
+                    return value.getID();
                 },
                 else => {
                     @compileError(T);
@@ -65,48 +64,33 @@ pub fn Table(comptime T: type) type {
             }
         }
 
-        // setID returns a modified copy of the orginial, with the ID set. It understands unions
-        fn setID(value: T, id: usize) T {
-            var v = value;
-            v.id = id;
-            return v;
+        // setID sets the value of id in the type passed. Understands unions
+        fn setID(value: *T, id: usize) void {
+            switch (@typeInfo(T)) {
+                .Struct => |_| {
+                    value.id = id;
+                },
+                .Union => |_| {
+                    value.setID(id);
+                },
+                else => {
+                    @compileError(T);
+                },
+            }
         }
 
         // append a value, autoincrementing the id field
         pub fn append(self: *Self, value: T) !void {
             const id = self.list.count() + 1;
-            switch (@typeInfo(T)) {
-                .Struct => |_| {
-                    const v = setID(value, id);
-                    try self.list.put(id, v);
-                },
-                .Union => |u| {
-                    // @compileLog("appending from", u, T);
-                    std.debug.print("------------------\n", .{});
-                    const tag_name = @tagName(value);
-                    const active_tag = std.meta.activeTag(value);
-                    std.debug.print("For value {} of type {} tagname is {s} active is {}\n", .{ value, @TypeOf(value), tag_name, active_tag });
-                    inline for (u.fields) |field| {
-                        std.debug.print(" - could be of type {s}={}\n", .{ field.name, field });
-                        if (std.mem.eql(u8, field.name, tag_name)) {
-                            std.debug.print("looks our value is a {s}\n", .{tag_name});
-                            // can we cast value to a thing of type field.type ??
-                            const x = @as(field.type, value);
-                            const v = setID(x, id);
-                            try self.list.put(id, v);
-                        }
-                    }
-                },
-                else => {
-                    @compileError(T);
-                },
-            }
+            var v = value;
+            setID(&v, id);
+            try self.list.put(id, v);
             self.dirty = true;
         }
 
         // put a value, using the supplied id value
-        pub fn put(self: *Self, value: T) !void {
-            try self.list.put(value.id, value);
+        pub fn put(self: *Self, value: anytype) !void {
+            try self.list.put(getID(value), value);
             self.dirty = true;
         }
 

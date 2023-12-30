@@ -13,4 +13,5 @@ pub fn main() !void {
     try dogs.createSimpleTable();
     try dogs.createTimeseries();
     try animals.createSimpleTable();
+    try animals.loadSimpleTable();
 }
