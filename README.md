@@ -57,7 +57,8 @@ In concept, A Datastor is a light comptime wrapper around your struct, that prov
 - Automatic synch to disk as your collection data changes
 - Handles memory management nicely, so you can load / save / re-load data as much as you like, and let the library manage the allocations and frees
 - Handles tagged union data, so each table may store multiple variants of a type, but still using a strict schema across types
-- Handles Tree structured data, so you can optionally overlay a heirachy on top of your collection (using a parent_id field)
+- Handles Tree structured data, so you can optionally overlay a heirachy on top of your collection
+- Utility functions for tree data to reparent nodes, or move nodes up and down within their parent block
 
 ## Intial State information vs State Transitions
 
