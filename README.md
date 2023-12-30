@@ -124,7 +124,6 @@ For Static + Timeseries data :
 | table.append(T)  (Autoincrement !)          | Adds a new element of type T to the table, setting the ID of the new record to the next value in sequence |
 | | |
 | Timeseries Functions | |
-|---|---|
 | table.eventCount() usize                    | How many events all up ? |
 | table.eventCountFor(id: usize) usize       | How many events for the given element ?|
 | | |
