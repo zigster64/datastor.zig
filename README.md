@@ -223,7 +223,7 @@ const CatEvent = struct {
 }
 ```
 
-## Example - Load up a table of Cats, with embedded Timeseries data, and run several different reports on it
+## Example - Load Cats+Timeseries data, and run several different reports
 
 ```
 pub fn cats_with_timeseries_data() !void {
