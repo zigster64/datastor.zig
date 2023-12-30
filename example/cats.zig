@@ -1,7 +1,7 @@
 const std = @import("std");
 const datastor = @import("datastor");
 
-const Cat = struct {
+pub const Cat = struct {
     id: usize = 0,
     breed: []const u8,
     color: []const u8,
@@ -95,7 +95,7 @@ pub fn loadSimpleTable() !void {
 }
 
 // A timeseries record of events that are associated with a cat
-const CatEvent = struct {
+pub const CatEvent = struct {
     parent_id: usize = 0,
     timestamp: i64,
     x: u16,

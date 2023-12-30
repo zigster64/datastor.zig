@@ -1,7 +1,7 @@
 const std = @import("std");
 const datastor = @import("datastor");
 
-const Dog = struct {
+pub const Dog = struct {
     id: usize = 0,
     breed: []const u8,
     color: []const u8,
@@ -70,7 +70,7 @@ pub fn createSimpleTable() !void {
 }
 
 // A timeseries record of events that are associated with a dog
-const DogEvent = struct {
+pub const DogEvent = struct {
     parent_id: usize = 0,
     timestamp: i64,
     x: u16,

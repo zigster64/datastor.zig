@@ -3,9 +3,19 @@ const s2s = @import("s2s.zig");
 const Allocator = std.mem.Allocator;
 
 pub fn Table(comptime T: type) type {
-
-    // sanity check the type passed in
-    if (!@hasField(T, "id")) @compileError("Struct is missing a field named 'id' of type usize");
+    switch (@typeInfo(T)) {
+        .Struct => |_| {
+            // sanity check the type passed in
+            if (!@hasField(T, "id")) @compileError("Struct is missing a field named 'id' of type usize");
+        },
+        .Union => |u| {
+            const Tag = u.tag_type orelse @compileError("Untagged unions are not supported!");
+            _ = Tag;
+        },
+        else => {
+            @compileError(T);
+        },
+    }
 
     return struct {
         const Self = @This();
@@ -39,11 +49,45 @@ pub fn Table(comptime T: type) type {
             return self.list.values();
         }
 
+        // getID gets the ID from the value - it understands unions
+        fn getID(self: *Self, value: T) usize {
+            _ = self;
+            switch (@typeInfo(T)) {
+                .Struct => |_| {
+                    return value.id;
+                },
+                .Union => |u| {
+                    @compileLog("Need to look through this thing of type union", u);
+                },
+                else => {
+                    @compileError(T);
+                },
+            }
+        }
+
+        // setID returns a modified copy of the orginial, with the ID set. It understands unions
+        fn setID(self: *Self, value: T, id: usize) T {
+            _ = self;
+            var v = value;
+            v.id = id;
+            return v;
+        }
+
         // append a value, autoincrementing the id field
         pub fn append(self: *Self, value: T) !void {
-            var v = value; // mutable local copy, because we store a modification of the original
-            v.id = self.list.count() + 1;
-            try self.list.put(v.id, v);
+            switch (@typeInfo(T)) {
+                .Struct => |_| {
+                    const id = self.list.count() + 1;
+                    const v = self.setID(value, id);
+                    try self.list.put(id, v);
+                },
+                .Union => |u| {
+                    @compileLog("appending from", u, T);
+                },
+                else => {
+                    @compileError(T);
+                },
+            }
             self.dirty = true;
         }
 
@@ -85,7 +129,7 @@ pub fn Table(comptime T: type) type {
                 _ = i;
 
                 const value = try s2s.deserializeAlloc(reader, T, self.allocator);
-                try self.append(value);
+                try self.put(value);
             }
             self.dirty = false;
         }
@@ -93,11 +137,19 @@ pub fn Table(comptime T: type) type {
 }
 
 pub fn TableWithTimeseries(comptime T: type, comptime E: type) type {
-
-    // sanity check the type passed in
-    if (!@hasField(T, "id")) @compileError("Base Struct is missing a field named 'id' of type usize");
-    if (!@hasField(E, "parent_id")) @compileError("Event Struct is missing a field named 'parent_id' of type usize");
-    if (!@hasField(E, "timestamp")) @compileError("Event Struct is missing a field named 'timestamp' of type i64");
+    switch (@typeInfo(T)) {
+        .Struct => |_| {
+            // sanity check the type passed in
+            if (!@hasField(T, "id")) @compileError("Base Struct is missing a field named 'id' of type usize");
+            if (!@hasField(E, "parent_id")) @compileError("Event Struct is missing a field named 'parent_id' of type usize");
+            if (!@hasField(E, "timestamp")) @compileError("Event Struct is missing a field named 'timestamp' of type i64");
+        },
+        .Union => |u| {
+            const Tag = u.tag_type orelse @compileError("Untagged unions are not supported!");
+            _ = Tag;
+        },
+        else => unreachable,
+    }
 
     return struct {
         const Self = @This();
