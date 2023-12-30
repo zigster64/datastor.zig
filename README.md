@@ -7,7 +7,7 @@ Intended use is for:
 - Object persistence using local storage, for edge / IoT / local game world, etc
 - Thread safe for use in a single process only
 - Persist both Static and Timeseries data
-- Situations where using an external DB are definitely overkill
+- Situations where using an external DB would be overkill
 
 Not intended for :
 
