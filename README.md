@@ -495,7 +495,8 @@ total query time for all that = approx 30us (microseconds)  or 0.03ms
 - Add something like a `datastor.zig.zon` file in a directory to allow some logical grouping of datastors into a larger DB schema
 - Data version management & migration updates 
 - Be able to load and save objects in S2S binary format to HTTP endpoints / S3 style cloud storage 
-- Add the ability to register clients that subscribe to event updates for a given record - need async / channels first though ??
+- Add the ability to attach Middleware to datastors.  Idea is something like - register a callback to fire when a table is updated or a new event is added.
+- Add the ability to register clients that subscribe to event updates for a given record - needs that middleware function above.
 - Add the abliity to register user defined serializers on a per-user-struct basis (ie - if `serialize()` exists on the struct, then use it)
 - Ability to shard datastors that may get very large
 - Import / Export to and from Excel / CSV / JSON formats
@@ -504,6 +505,15 @@ total query time for all that = approx 30us (microseconds)  or 0.03ms
 
 ## Future Goals - UI support
 
-- Add a generic web based Datastor viewer (Zig app that spawns a local web server - navigate through stores, render datastor contents, etc)
-- Add a generic Native UI app (Zig app using libui-ng tables)
+This comes in 2 parts.
+
+Part 1 is having these as library functions that you can add to your app that does :
+
+- Add a web based Datastor viewer (Zig app that spawns a local web server + HTMX app to navigate through stores, render datastor contents, etc)
+- Add a  Native UI app (Zig app using libui-ng tables)
+
+Part 2 is having a generic standalone program that does the same thing with existing datastor files.
+
+Part 1 is easy, because your app code already has the structs defined in code. Part 2 is going to be hard, as S2S provides no schema info.
+Will have to sort that problem out first
 
