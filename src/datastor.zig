@@ -66,8 +66,7 @@ pub fn Table(comptime T: type) type {
         }
 
         // setID returns a modified copy of the orginial, with the ID set. It understands unions
-        fn setID(self: *Self, value: T, id: usize) T {
-            _ = self;
+        fn setID(value: T, id: usize) T {
             var v = value;
             v.id = id;
             return v;
@@ -75,14 +74,28 @@ pub fn Table(comptime T: type) type {
 
         // append a value, autoincrementing the id field
         pub fn append(self: *Self, value: T) !void {
+            const id = self.list.count() + 1;
             switch (@typeInfo(T)) {
                 .Struct => |_| {
-                    const id = self.list.count() + 1;
-                    const v = self.setID(value, id);
+                    const v = setID(value, id);
                     try self.list.put(id, v);
                 },
                 .Union => |u| {
-                    @compileLog("appending from", u, T);
+                    // @compileLog("appending from", u, T);
+                    std.debug.print("------------------\n", .{});
+                    const tag_name = @tagName(value);
+                    const active_tag = std.meta.activeTag(value);
+                    std.debug.print("For value {} of type {} tagname is {s} active is {}\n", .{ value, @TypeOf(value), tag_name, active_tag });
+                    inline for (u.fields) |field| {
+                        std.debug.print(" - could be of type {s}={}\n", .{ field.name, field });
+                        if (std.mem.eql(u8, field.name, tag_name)) {
+                            std.debug.print("looks our value is a {s}\n", .{tag_name});
+                            // can we cast value to a thing of type field.type ??
+                            const x = @as(field.type, value);
+                            const v = setID(x, id);
+                            try self.list.put(id, v);
+                        }
+                    }
                 },
                 else => {
                     @compileError(T);
