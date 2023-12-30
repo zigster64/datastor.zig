@@ -4,15 +4,9 @@ Fast & Light Data persistence layer for Zig
 
 Intended use is for:
 
-- Object persistence in a typical game world setting
-- A fast local data storage and retrieval system for edge / IoT devices
-- Direct disk I/O, no need to talk to a DB server over the wire
-- No interruption of data IO whilst "offline"
-- Runs just fine on emebedded / ARM / Pi with tiny memory footprint
-- Thread safe for use in a single process
-- Optimized for both Static and Timeseries data
-- Static data that may be updated occassionally only
-- Total amount of event data maxxing out at about 10,000 events per table before performance suffers (? depends on hardware)
+- Object persistence using local storage, for edge / IoT / local game world, etc
+- Thread safe for use in a single process only
+- Persist both Static and Timeseries data
 - Situations where using an external DB are definitely overkill
 
 Not intended for :
@@ -69,17 +63,19 @@ In concept, A Datastor is a light comptime wrapper around your struct, that prov
 Datastor takes a highly opinionated approach to separating data persistence between "Static" data, and "Timeseries" data.
 
 Static data is for :
-- TODO list of attributes of static data
+- Initial State data / config / assets
+- May be updated occassionally after initial boot
 - Static data is explicitly loaded and saved to and from disk using functions `table.load()` and `table.save()`
 
 Timeseries data is for :
-- TODO list of attributes of timeseries data
+- Recording state transitions in the static data, after system start
+- Timestamped audit trail of events for each element of static data
 - Timeseries data is explicitly loaded on `table.load()`, and automatically appended to disk on `table.addEvent(Event)`
 
 
 The API considers that the initial state of an Item, and its collection of events over time, form a single Coherent Entity with a single logical API.
 
-On disk, its splits these into 2 files - 1 file for the initial Static data, that is rarely (if ever) updated, and 1 other file for the timeseries / event 
+On disk, its splits these into 2 files - 1 file for the initial Static data, that is only occassionally updated (if ever), and 1 other file for the timeseries / event 
 data, that is frequently appended to.
 
 The Datastor API then wraps this as a single storage item.
@@ -100,11 +96,13 @@ For Static-only data :
 | table.save() !void                          | Explicitly save the data to disk |
 | | |
 | table.values() []T                          | Returns a slice of all the values in the Table |
-| table.get(id) ?T                           | Gets the element of type T, with the given ID (or null if not found) |
+| table.get(id) ?T                            | Gets the element of type T, with the given ID (or null if not found) |
 | | |
-| table.append(T)                             | Appends new element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
 | table.put(T)                                | Add or overwrite element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
-| table.appendAutoIncrement(T)                | Appends new element of type T to the Table, setting the ID of the element to the next in sequence. Does not write to disk yet | 
+| table.append(T)  (Autoincrement !)          | Adds a new element of type T to the table, setting the ID of the new record to the next value in sequence |
+
+Autoincrement note - Datatsor calculates the 'next sequence' as `Table.len + 1`, which is quick and simple enough. 
+If loading data into a datastor, then use one method or the other, but avoid mixing them together, as the ID forms the key in the hashtable.
 
 For Static + Timeseries data :
 
@@ -120,10 +118,11 @@ For Static + Timeseries data :
 | table.values() []T                          | Returns a slice of all the values in the Table |
 | table.get(id) ?T                           | Gets the element of type T, with the given ID (or null if not found) |
 | | |
-| table.append(T)                             | Appends new element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
 | table.put(T)                                | Add or overwrite element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
-| table.appendAutoIncrement(T)                | Appends new element of type T to the Table, setting the ID of the element to the next in sequence. Does not write to disk yet | 
+| table.append(T)  (Autoincrement !)          | Adds a new element of type T to the table, setting the ID of the new record to the next value in sequence |
 | | |
+| Timeseries Functions | |
+|---|---|
 | table.eventCount() usize                    | How many events all up ? |
 | table.eventCountFor(id: usize) usize       | How many events for the given element ?|
 | | |
