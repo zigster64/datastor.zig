@@ -151,6 +151,7 @@ const Cat = struct {
 
     const Self = @This();
 
+    // struct must supply a free() function for the datastor to manage cleaning up memory allocations
     pub fn free(self: Self, allocator: std.mem.Allocator) void {
         allocator.free(self.breed);
         allocator.free(self.color);
@@ -215,6 +216,7 @@ const CatEvent = struct {
 
     const Self = @This();
 
+    // events struct must also supply a free() function for the datastor to manage cleaning up memory allocations
     pub fn free(self: Self, allocator: std.mem.Allocator) void {
         allocator.free(self.description);
     }
@@ -227,8 +229,13 @@ const CatEvent = struct {
 pub fn cats_with_timeseries_data() !void {
     const gpa = std.heap.page_allocator;
 
-    // use TableWithTimeseries - give it 2 struct types, one for the static info on the Cat, and the other to store events
-    var catDB = try datastor.TableWithTimeseries(Cat, CatEvent).init(gpa, "db/cats.db", "db/cats.events");
+    // use TableWithTimeseries - give it 2 struct types
+    // one for the static info on the Cat, and the other to store events
+    var catDB = try datastor.TableWithTimeseries(Cat, CatEvent).init(
+      gpa,
+      "db/cats.db",
+      "db/cats.events",
+    );
     defer catDB.deinit();
 
     // load both the base table, and all the events for all cats
@@ -240,13 +247,19 @@ pub fn cats_with_timeseries_data() !void {
         std.debug.print("{s}", .{event});
     }
 
-    // now print out Cats in the datastor, along with an audit trail of events for each cat
+    // now print out Cats in the datastor,
+    // along with an audit trail of events for each cat
     std.debug.print("\nAll cats with full audit trail:\n", .{});
     for (catDB.values()) |cat| {
         std.debug.print("Cat {s}\n", .{cat});
         const events = try catDB.getEventsFor(cat.id);
         for (events.items) |event| {
-            std.debug.print("  - At {d}: {s} -> moves to ({d},{d}) status: (Asleep:{any}, Attacking:{any})\n", .{ event.timestamp, event.description, event.x, event.y, event.sleep, event.attacks });
+            std.debug.print("  - At {d}: {s} -> moves to ({d},{d}) status: (Asleep:{any}, Attacking:{any})\n",
+            .{
+               event.timestamp, event.description,
+               event.x, event.y,
+               event.sleep, event.attacks,
+            });
         }
         defer events.deinit();
     }
@@ -257,7 +270,15 @@ pub fn cats_with_timeseries_data() !void {
         std.debug.print("\nState of all cats at Timestamp {d}\n", .{t});
         for (catDB.values()) |cat| {
             if (catDB.eventAt(cat.id, t)) |e| {
-                std.debug.print("  - {s} {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n", .{ cat.breed, e.description, e.timestamp, e.x, e.y, e.sleep, e.attacks });
+                std.debug.print("  - {s} {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n",
+                .{
+                  cat.breed,
+                  e.description,
+                  e.timestamp,
+                  e.x, e.y,
+                  e.sleep,
+                  e.attacks,
+                });
             } else unreachable;
         }
     }
@@ -266,7 +287,15 @@ pub fn cats_with_timeseries_data() !void {
     std.debug.print("\nCurrent state of all cats, based on latest event for each\n", .{});
     for (catDB.values()) |cat| {
         const e = catDB.latestEvent(cat.id).?;
-        std.debug.print("  - {s} is currently doing - {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n", .{ cat.breed, e.description, e.timestamp, e.x, e.y, e.sleep, e.attacks });
+        std.debug.print("  - {s} is currently doing - {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n",
+            .{
+                cat.breed,
+                e.description,
+                e.timestamp,
+                e.x, e.y,
+                e.sleep,
+                e.attacks,
+            });
     }
 }
 ```
@@ -350,7 +379,8 @@ const Animal = union(AnimalType) {
     cat: cats.Cat,
     dog: dogs.Dog,
 
-    // Union types MUST have ID getters and setters for now - annoying, but Im not sure yet how to get around this
+    // Union types MUST have ID getters and setters for now
+    // bit annoying, but Im not sure yet how to get around this
     pub fn setID(self: *Self, id: usize) void {
         switch (self.*) {
             .cat => |*cat| cat.id = id,
