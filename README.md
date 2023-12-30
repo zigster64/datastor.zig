@@ -15,7 +15,7 @@ Not intended for :
 - General Purpose data persistence. Datastor has a highly opinionated approach to dealing with Static vs Timeseries data. That may not suit the way your data is structured.
 - Current data format uses native `usize` quite a bit, so the datafiles are not 100% portable between machines with different word sizes.
 - Static datasets that grow, shrink, or change often.
-- Handling large volumes of timeseries data
+- Handling very large volumes of timeseries data.
 
 For any of the "Not Intended" use cases above, best look at options such as server based PostgreSQL w/ TimeseriesDB extensions over the network.
 
@@ -56,6 +56,7 @@ In concept, A Datastor is a light comptime wrapper around your struct, that prov
 - Timeseries handy functions to get element state at a point in time / events over a period, etc
 - Automatic synch to disk as your collection data changes
 - Handles memory management nicely, so you can load / save / re-load data as much as you like, and let the library manage the allocations and frees
+- Handles tagged union data, so each table may store multiple variants of a type, but still using a strict schema across types
 - Handles Tree structured data, so you can optionally overlay a heirachy on top of your collection (using a parent_id field)
 
 ## Intial State information vs State Transitions
@@ -469,6 +470,7 @@ total query time for all that = approx 30us (microseconds)  or 0.03ms
 - Ability to shard datastors that may get very large
 - Import / Export to and from Excel / CSV / JSON formats
 - Add multiple nodes, with replication and failover
+- Add option to use protobuf format as the serialization format
 
 ## Future Goals - UI support
 
