@@ -283,7 +283,7 @@ pub fn cats_with_timeseries_data() !void {
         }
     }
 
-    // iterate through 3 timestamps and show the state of all cats at the given timestamp
+    // iterate through 4 timestamps and show the state of all cats at the given timestamp
     for (0..4) |i| {
         const t: i64 = @as(i64, @intCast(i * 10 + 1));
         std.debug.print("\nState of all cats at Timestamp {d}\n", .{t});
