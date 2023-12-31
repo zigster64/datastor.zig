@@ -68,11 +68,13 @@ Static data is for :
 - Initial State data / config / assets
 - May be updated occassionally after initial boot
 - Static data is explicitly loaded and saved to and from disk using functions `table.load()` and `table.save()`
+- There is no per-record disk I/O. `load()` loads the whole table from disk, and `save()` saves the whole table to disk
 
 Timeseries data is for :
 - Recording state transitions in the static data, after system start
 - Timestamped audit trail of events for each element of static data
-- Timeseries data is explicitly loaded on `table.load()`, and automatically appended to disk on `table.addEvent(Event)`
+- Timeseries data is loaded on `table.load()`, and automatically appended to disk on every `table.addEvent(Event)`
+- Disk I/O is per record - everytime a new timeseries event is added
 
 
 The API considers that the initial state of an Item, and its collection of events over time, form a single Coherent Entity with a single logical API.
