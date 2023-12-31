@@ -86,9 +86,9 @@ The Datastor API then wraps this as a single storage item.
 
 ---
 
-## API Overview
+# API Overview
 
-For Static-only data :
+## For Static-only data :
 
 | Function | Description |
 |----------|-------------|
@@ -108,7 +108,7 @@ For Static-only data :
 Autoincrement note - Datatsor calculates the 'next sequence' as `Table.len + 1`, which is quick and simple enough. 
 If loading data into a datastor, then use one method or the other, but avoid mixing them together, as the ID forms the key in the hashtable.
 
-For Static + Timeseries data :
+## For Static + Timeseries data :
 
 | Function | Description |
 |----------|-------------|
