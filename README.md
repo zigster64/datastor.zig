@@ -140,7 +140,8 @@ For Static + Timeseries data :
 ## Tree / Heirachy Table Support
 
 In order to be treated as a tree, elements of the Table must have a field `parent_id: usize`
-Or - for Tagged Union types, the tagged union must provide 2 functions `getParentID() usize` and `setParentID(usize)`
+
+For Tagged Union types, the tagged union must provide 2 functions `getParentID() usize` and `setParentID(usize)` 
 
 | Function | Description |
 |----------|-------------|
