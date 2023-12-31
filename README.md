@@ -25,15 +25,6 @@ On disk format uses S2S format for object storage
 S2S is battle tested code, but it does lack a few types that it can serialize out of the box. You can code around this
 easy enough, but its something you should be aware of.
 
-
-## *** DANGER ZONE ***
-
-This code - and this README, are purely speculative at this point.
-
-I will be rewriting the README a dozen times, as the API evolves, and code starts to work.
-
-Feel free to follow along of course ... but its going to take time before I can post anything useful on this.
-
 ## Version Log
 
 - Dec 2023 - v0.0.0 - init project
