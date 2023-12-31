@@ -183,10 +183,10 @@ pub fn createTimeseries() !void {
     for (catDB.values()) |cat| {
         std.debug.print("Cat {s}\n", .{cat});
         const events = try catDB.getEventsFor(cat.id);
+        defer events.deinit();
         for (events.items) |event| {
             std.debug.print("  - At {d}: {s} -> moves to ({d},{d}) status: (Asleep:{any}, Attacking:{any})\n", .{ event.timestamp, event.description, event.x, event.y, event.sleep, event.attacks });
         }
-        defer events.deinit();
     }
 
     // iterate through 3 timestamps and show the state of all cats at the given timestamp
@@ -236,10 +236,10 @@ pub fn createTimeseriesNoIO() !void {
     // now print out Cats in the datastor, along with an audit trail of events for each cat
     for (catDB.values()) |cat| {
         const events = try catDB.getEventsFor(cat.id);
+        defer events.deinit();
         for (events.items) |event| {
             _ = event;
         }
-        defer events.deinit();
     }
 
     // iterate through 3 timestamps and show the state of all cats at the given timestamp

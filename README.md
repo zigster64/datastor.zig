@@ -272,6 +272,7 @@ pub fn cats_with_timeseries_data() !void {
     for (catDB.values()) |cat| {
         std.debug.print("Cat {s}\n", .{cat});
         const events = try catDB.getEventsFor(cat.id);
+        defer events.deinit();
         for (events.items) |event| {
             std.debug.print("  - At {d}: {s} -> moves to ({d},{d}) status: (Asleep:{any}, Attacking:{any})\n",
             .{
@@ -280,7 +281,6 @@ pub fn cats_with_timeseries_data() !void {
                event.sleep, event.attacks,
             });
         }
-        defer events.deinit();
     }
 
     // iterate through 3 timestamps and show the state of all cats at the given timestamp
