@@ -285,10 +285,10 @@ pub fn cats_with_timeseries_data() !void {
 
     // iterate through 4 timestamps and show the state of all cats at the given timestamp
     for (0..4) |i| {
-        const t: i64 = @as(i64, @intCast(i * 10 + 1));
+        const t = i * 10 + 1;
         std.debug.print("\nState of all cats at Timestamp {d}\n", .{t});
         for (catDB.values()) |cat| {
-            if (catDB.eventAt(cat.id, t)) |e| {
+            if (catDB.eventAt(cat.id, @intCast(t))) |e| {
                 std.debug.print("  - {s} {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n",
                 .{
                   cat.breed,
