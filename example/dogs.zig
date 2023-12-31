@@ -164,7 +164,7 @@ pub fn createTimeseries() !void {
         defer events.deinit();
     }
 
-    // iterate through 3 timestamps and show the state of all dogs at the given timestamp
+    // iterate through 4 timestamps and show the state of all dogs at the given timestamp
     for (0..4) |i| {
         const t: i64 = @as(i64, @intCast(i * 10 + 1));
         std.debug.print("\nState of all dogs at Timestamp {d}\n", .{t});
