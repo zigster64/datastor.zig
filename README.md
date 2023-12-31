@@ -204,12 +204,26 @@ Cat 3 is ID: 4 Breed: Bengal Color: tiger stripes Length: 40, Aggression Factor:
 
 # Timeseries data Examples
 
+So far so good. Our virtural world is now populated with a group of cats.
+
+However, our cats (when they are not sleeping), like to get up and move around.
+
+We need to track where are cats are and what they are doing.
+
+But we dont want to have to keep overwritting state information against our Cats everytime something happens.
+
+We can get around this by adding Timeseries data to each Cat. Timeseries data is a fast append-only, timestamped record
+of events that tracks what happens with a Cat at a point in time.
+
+Using a Timeseries log, we keep the original state information about all our cats in a pristine condition, and can use
+the timeseries data to quickly work out what state any Cat is in at a point in time.
+
 ## Example - define Timeseries / Event data for each Cat
 
 ```
 // A timeseries record of events that are associated with a cat
 const CatEvent = struct {
-    parent_id: usize = 0,
+    parent_id: usize = 0, // parent_id is the ID of the Cat that this event belongs to
     timestamp: i64,
     x: u16,
     y: u16,
@@ -221,6 +235,7 @@ const CatEvent = struct {
     const Self = @This();
 
     // events struct must also supply a free() function for the datastor to manage cleaning up memory allocations
+    // since the event contains a string "description" that is allocated on demand.
     pub fn free(self: Self, allocator: std.mem.Allocator) void {
         allocator.free(self.description);
     }
