@@ -652,17 +652,15 @@ pub fn loadTable() !void {
 fn printForrestRecursive(forrestDB: ForrestDB, parent_id: usize, nesting: usize) !void {
     const children = try forrestDB.getChildren(parent_id);
     defer children.deinit();
-
     for (children.items) |forrest| {
-        if (forrest.getParentID() == parent_id) {
-            for (0..nesting) |_| {
-                std.debug.print("    ", .{});
-            }
-            std.debug.print(" {any}:\n", .{forrest});
-            try printForrestRecursive(forrestDB, forrest.getID(), nesting + 1);
+        for (0..nesting) |_| {
+            std.debug.print("    ", .{});
         }
+        std.debug.print(" {}:\n", .{forrest});
+        try printForrestRecursive(forrestDB, forrest.getID(), nesting + 1);
     }
 }
+
 ```
 
 produces output :
@@ -682,7 +680,6 @@ Structured display for the contents of the forrest:
              forrest.Forrest{ .creature = .id = 10, .parent_id = 9, .x = 5, .y = 6, .name = Ant, .weight = 1 }:
              forrest.Forrest{ .creature = .id = 11, .parent_id = 9, .x = 5, .y = 6, .name = Wasp, .weight = 1 }:
 ```
-
 ---
 
 # Performance

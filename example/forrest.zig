@@ -191,14 +191,11 @@ pub fn loadTable() !void {
 fn printForrestRecursive(forrestDB: ForrestDB, parent_id: usize, nesting: usize) !void {
     const children = try forrestDB.getChildren(parent_id);
     defer children.deinit();
-
     for (children.items) |forrest| {
-        if (forrest.getParentID() == parent_id) {
-            for (0..nesting) |_| {
-                std.debug.print("    ", .{});
-            }
-            std.debug.print(" {}:\n", .{forrest});
-            try printForrestRecursive(forrestDB, forrest.getID(), nesting + 1);
+        for (0..nesting) |_| {
+            std.debug.print("    ", .{});
         }
+        std.debug.print(" {}:\n", .{forrest});
+        try printForrestRecursive(forrestDB, forrest.getID(), nesting + 1);
     }
 }
