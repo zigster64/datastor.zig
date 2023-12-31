@@ -460,7 +460,7 @@ pub fn createTable() !void {
 ## Load Union data from a datastor
 
 ```
-pub fn loadSimpleTable() !void {
+pub fn loadTable() !void {
     const gpa = std.heap.page_allocator;
     var animalDB = try datastor.Table(Animal).init(gpa, "db/animals.db");
     defer animalDB.deinit();
