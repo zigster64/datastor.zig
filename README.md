@@ -680,6 +680,15 @@ Structured display for the contents of the forrest:
              forrest.Forrest{ .creature = .id = 10, .parent_id = 9, .x = 5, .y = 6, .name = Ant, .weight = 1 }:
              forrest.Forrest{ .creature = .id = 11, .parent_id = 9, .x = 5, .y = 6, .name = Wasp, .weight = 1 }:
 ```
+
+Please note that in this example of loading and displaying a Heirachy, there is no thrashing of the Datastor 
+to look up sub-queries of sub-queries from disk.
+
+There is a single Disk I/O operation up front to load the entire Tree into memory, and then all the subsequent
+calls to get the children of a node are just run against the in-memory tree.
+
+This is fine (and super fast) for Tree data that remains relatively static.
+
 ---
 
 # Performance
