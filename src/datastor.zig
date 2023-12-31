@@ -11,6 +11,7 @@ pub fn Table(comptime T: type) type {
         .Union => |u| {
             const Tag = u.tag_type orelse @compileError("Untagged unions are not supported!");
             _ = Tag;
+            if (!std.meta.hasFn(T, "getID") or !std.meta.hasFn(T, "setID")) @compileError("Tagged unions must supply getID() usize, setID(usize), free(std.mem.Allocator) functions");
         },
         else => {
             @compileError(T);
@@ -20,22 +21,39 @@ pub fn Table(comptime T: type) type {
     return struct {
         const Self = @This();
         const ListType = std.AutoArrayHashMap(usize, T);
+        const ArrayType = std.ArrayList(T);
         allocator: Allocator,
         list: ListType,
         filename: []const u8,
         dirty: bool = false,
+        is_tree: bool = false,
 
         pub fn init(allocator: Allocator, filename: []const u8) !Self {
+            var is_tree = false;
+            switch (@typeInfo(T)) {
+                .Struct => |_| {
+                    is_tree = @hasField(T, "parent_id");
+                },
+                .Union => |_| {
+                    is_tree = std.meta.hasFn(T, "getParentID") and std.meta.hasFn(T, "setParentID");
+                },
+                else => {
+                    @compileError(T);
+                },
+            }
             return .{
                 .allocator = allocator,
                 .list = ListType.init(allocator),
                 .filename = try allocator.dupe(u8, filename),
+                .is_tree = is_tree,
             };
         }
 
         fn freeItems(self: *Self) void {
-            for (self.list.values()) |value| {
-                value.free(self.allocator);
+            if (std.meta.hasFn(T, "free")) {
+                for (self.list.values()) |value| {
+                    value.free(self.allocator);
+                }
             }
         }
 
@@ -80,12 +98,13 @@ pub fn Table(comptime T: type) type {
         }
 
         // append a value, autoincrementing the id field
-        pub fn append(self: *Self, value: T) !void {
+        pub fn append(self: *Self, value: T) !usize {
             const id = self.list.count() + 1;
             var v = value;
             setID(&v, id);
             try self.list.put(id, v);
             self.dirty = true;
+            return id;
         }
 
         // put a value, using the supplied id value
@@ -130,6 +149,32 @@ pub fn Table(comptime T: type) type {
             }
             self.dirty = false;
         }
+
+        // Tree support  functions
+        pub fn getChildren(self: Self, parent_id: usize) !ArrayType {
+            var children = ArrayType.init(self.allocator);
+            for (self.list.values()) |value| {
+                if (getParentID(value) == parent_id) {
+                    try children.append(value);
+                }
+            }
+            return children;
+        }
+
+        // getParentID gets the parent ID from the value - it understands unions
+        fn getParentID(value: T) usize {
+            switch (@typeInfo(T)) {
+                .Struct => |_| {
+                    return value.parent_id;
+                },
+                .Union => |_| {
+                    return value.getParentID();
+                },
+                else => {
+                    @compileError(T);
+                },
+            }
+        }
     };
 }
 
@@ -137,39 +182,61 @@ pub fn TableWithTimeseries(comptime T: type, comptime E: type) type {
     switch (@typeInfo(T)) {
         .Struct => |_| {
             // sanity check the type passed in
-            if (!@hasField(T, "id")) @compileError("Base Struct is missing a field named 'id' of type usize");
-            if (!@hasField(E, "parent_id")) @compileError("Event Struct is missing a field named 'parent_id' of type usize");
-            if (!@hasField(E, "timestamp")) @compileError("Event Struct is missing a field named 'timestamp' of type i64");
+            if (!@hasField(T, "id")) @compileError("Struct is missing a field named 'id' of type usize");
+            if (!std.meta.hasFn(T, "free")) @compileError("Struct free(std.mem.Allocator) function");
         },
         .Union => |u| {
             const Tag = u.tag_type orelse @compileError("Untagged unions are not supported!");
             _ = Tag;
+            if (!std.meta.hasFn(T, "getID") or !std.meta.hasFn(T, "setID")) @compileError("Tagged unions must supply getID() usize, setID(usize), free(std.mem.Allocator) functions");
         },
-        else => unreachable,
+        else => {
+            @compileError(T);
+        },
     }
 
     return struct {
         const Self = @This();
         const EventsType = std.ArrayList(E);
+        const ArrayType = std.ArrayList(T);
         allocator: Allocator,
         table: Table(T),
         events: EventsType,
         events_filename: []const u8,
         mutex: std.Thread.Mutex,
+        is_tree: bool = false,
+        has_free: bool = false,
 
         pub fn init(allocator: Allocator, base_filename: []const u8, events_filename: []const u8) !Self {
+            var is_tree = false;
+            switch (@typeInfo(T)) {
+                .Struct => |_| {
+                    is_tree = @hasField(T, "parent_id");
+                },
+                .Union => |_| {
+                    is_tree = std.meta.hasFn(T, "getParentID");
+                    if (is_tree and !std.meta.hasFn(T, "setParentID")) @compileError("Union type must supply both getParentID() usize and setParentID(usize) functions for tree data");
+                },
+                else => {
+                    @compileError(T);
+                },
+            }
             return .{
                 .allocator = allocator,
                 .table = try Table(T).init(allocator, base_filename),
                 .events = EventsType.init(allocator),
                 .events_filename = try allocator.dupe(u8, events_filename),
                 .mutex = .{},
+                .is_tree = is_tree,
+                .has_free = std.meta.hasFn(T, "free"),
             };
         }
 
         fn freeItems(self: *Self) void {
-            for (self.events.values()) |value| {
-                value.free(self.allocator);
+            if (self.has_free) {
+                for (self.list.values()) |value| {
+                    value.free(self.allocator);
+                }
             }
         }
 
@@ -184,7 +251,7 @@ pub fn TableWithTimeseries(comptime T: type, comptime E: type) type {
         }
 
         // append a value, autoincrementing the id field
-        pub fn append(self: *Self, value: T) !void {
+        pub fn append(self: *Self, value: T) !usize {
             return self.table.append(value);
         }
 
@@ -289,6 +356,17 @@ pub fn TableWithTimeseries(comptime T: type, comptime E: type) type {
                 if (event.parent_id == id) last_event = event;
             }
             return last_event;
+        }
+
+        // Tree support  functions
+        pub fn getChildren(self: Self, parent_id: usize) ArrayType {
+            var children = ArrayType.init(self.allocator);
+            for (self.list.values()) |value| {
+                if (value.parent_id == parent_id) {
+                    try children.append(value);
+                }
+            }
+            return children;
         }
     };
 }

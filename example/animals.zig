@@ -40,7 +40,7 @@ const Animal = union(AnimalType) {
     }
 };
 
-pub fn createSimpleTable() !void {
+pub fn createTable() !void {
     std.os.unlink("db/animals.db") catch {};
 
     const gpa = std.heap.page_allocator;
@@ -53,7 +53,7 @@ pub fn createSimpleTable() !void {
     defer animalDB.deinit();
 
     // add a cat
-    try animalDB.append(Animal{
+    _ = try animalDB.append(Animal{
         .cat = .{
             .breed = try gpa.dupe(u8, "Siamese"),
             .color = try gpa.dupe(u8, "Sliver"),
@@ -63,7 +63,7 @@ pub fn createSimpleTable() !void {
     });
 
     // add a dog
-    try animalDB.append(Animal{
+    _ = try animalDB.append(Animal{
         .dog = .{
             .breed = try gpa.dupe(u8, "Colley"),
             .color = try gpa.dupe(u8, "Black and White"),
@@ -75,7 +75,7 @@ pub fn createSimpleTable() !void {
     try animalDB.save();
 }
 
-pub fn loadSimpleTable() !void {
+pub fn loadTable() !void {
     const gpa = std.heap.page_allocator;
 
     std.debug.print("------------------------------------------------\n", .{});

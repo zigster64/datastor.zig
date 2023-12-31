@@ -35,7 +35,7 @@ const dogs = [_]Dog{
 };
 
 // An example of a datastor on a simple 2D table
-pub fn createSimpleTable() !void {
+pub fn createTable() !void {
     // remove the original data file
     std.os.unlink("db/dogs.db") catch {};
 
@@ -50,7 +50,7 @@ pub fn createSimpleTable() !void {
     // manually fill in datastor using our example dog seed data, autoincrementing the ID
     // deliberately create a new dog on the heap, duplicating all its components
     for (dogs) |dog| {
-        try dogDB.append(Dog{
+        _ = try dogDB.append(Dog{
             .breed = try gpa.dupe(u8, dog.breed),
             .color = try gpa.dupe(u8, dog.color),
             .height = dog.height,

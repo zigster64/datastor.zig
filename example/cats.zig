@@ -35,7 +35,7 @@ const cats = [_]Cat{
 };
 
 // An example of a datastor on a simple 2D table
-pub fn createSimpleTable() !void {
+pub fn createTable() !void {
     // remove the original data file
     std.os.unlink("db/cats.db") catch {};
 
@@ -50,7 +50,7 @@ pub fn createSimpleTable() !void {
     // manually fill in datastor using our example cats seed data, autoincrementing the ID
     // deliberately create a new cat on the heap, duplicating all its components
     for (cats) |cat| {
-        try catDB.append(Cat{
+        _ = try catDB.append(Cat{
             .breed = try gpa.dupe(u8, cat.breed),
             .color = try gpa.dupe(u8, cat.color),
             .length = cat.length,
@@ -70,7 +70,7 @@ pub fn createSimpleTable() !void {
 }
 
 // An example of loading a datastor from disk
-pub fn loadSimpleTable() !void {
+pub fn loadTable() !void {
     const gpa = std.heap.page_allocator;
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nCats example - load simple data set from table\n\n", .{});
@@ -244,11 +244,8 @@ pub fn createTimeseriesNoIO() !void {
 
     // iterate through 3 timestamps and show the state of all cats at the given timestamp
     for (0..4) |i| {
-        const t: i64 = @as(i64, @intCast(i * 10 + 1));
         for (catDB.values()) |cat| {
-            if (catDB.eventAt(cat.id, t)) |e| {
-                _ = e;
-            } else unreachable;
+            if (catDB.eventAt(cat.id, @intCast(i * 10 + 1))) |_| {} else unreachable;
         }
     }
 

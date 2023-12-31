@@ -101,7 +101,7 @@ For Static-only data :
 | table.get(id) ?T                            | Gets the element of type T, with the given ID (or null if not found) |
 | | |
 | table.put(T)                                | Add or overwrite element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
-| table.append(T)  (Autoincrement !)          | Adds a new element of type T to the table, setting the ID of the new record to the next value in sequence |
+| table.append(T) usize  (Autoincrement !)          | Adds a new element of type T to the table, setting the ID of the new record to the next value in sequence. Returns the new ID |
 
 Autoincrement note - Datatsor calculates the 'next sequence' as `Table.len + 1`, which is quick and simple enough. 
 If loading data into a datastor, then use one method or the other, but avoid mixing them together, as the ID forms the key in the hashtable.
@@ -121,7 +121,7 @@ For Static + Timeseries data :
 | table.get(id) ?T                           | Gets the element of type T, with the given ID (or null if not found) |
 | | |
 | table.put(T)                                | Add or overwrite element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
-| table.append(T)  (Autoincrement !)          | Adds a new element of type T to the table, setting the ID of the new record to the next value in sequence |
+| table.append(T) usize  (Autoincrement !)          | Adds a new element of type T to the table, setting the ID of the new record to the next value in sequence. Returns the new ID |
 | | |
 | Timeseries Functions | |
 | table.eventCount() usize                    | How many events all up ? |
@@ -135,6 +135,16 @@ For Static + Timeseries data :
 | table.addEvent(event)                       | Add the given event to the collection. Will append to disk as well as update the events in memory |
 | table.latestEvent(id: usize)               | Get the latest event for element matching ID |
 | table.eventAt(id: usize, timestamp: i64)   | Get the state of the element matching ID at the given timestamp. Will return the event that is on or before the given timestamp |
+
+
+## Tree / Heirachy Table Support
+
+In order to be treated as a tree, elements of the Table must have a field `parent_id: usize`
+Or - for Tagged Union types, the tagged union must provide 2 functions `getParentID() usize` and `setParentID(usize)`
+
+| Function | Description |
+|----------|-------------|
+| getChildren(parent_id) ArrayList(T) | Returns an ArrayList(T) of child nodes with this parent.<br><br>Caller owns the ArrayList and must `deinit()` after use |
 
 ---
 # Table data Examples
@@ -406,7 +416,7 @@ const Animal = union(AnimalType) {
 ## Save data to a Union datastor
 
 ```
-pub fn createSimpleTable() !void {
+pub fn createTable() !void {
     const gpa = std.heap.page_allocator;
     var animalDB = try datastor.Table(Animal).init(gpa, "db/animals.db");
     defer animalDB.deinit();
@@ -414,6 +424,8 @@ pub fn createSimpleTable() !void {
     // add a cat
     try animalDB.append(Animal{
         .cat = .{
+            // NOTE - we dupe these values onto the heap, because we want these strings 
+            // to live beyond the scope of just this function
             .breed = try gpa.dupe(u8, "Siamese"),
             .color = try gpa.dupe(u8, "Sliver"),
             .length = 28,
@@ -456,6 +468,210 @@ produces output
 ```
 Animal 0 is animals.Animal{ .cat = ID: 1 Breed: Siamese Color: Sliver Length: 28, Aggression Factor: 9.00e-01 }:
 Animal 1 is animals.Animal{ .dog = ID: 2 Breed: Colley Color: Black and White Height: 33, Appetite: 9.00e-01 }:
+```
+
+---
+
+# Tree / Heirachical Data examples
+
+## Define a complicated struct that also represents Tree structured data
+
+```
+////////////////////////////////////////////////////////////////////////////////
+// 3 types of things we can find in the forrest
+
+const Tree = struct {
+    id: usize = 0,
+    parent_id: usize,
+    x: u8, y: u8, height: u8,
+};
+
+const Creature = struct {
+    const Self = @This();
+    id: usize = 0,
+    parent_id: usize,
+    x: u8, y: u8, name: []const u8, weight: u8,
+
+    // needs a free() function because it has a slice that gets allocated
+    pub fn free(self: Self, allocator: Allocator) void {
+        allocator.free(self.name);
+    }
+};
+
+const Rock = struct {
+    id: usize = 0,
+    parent_id: usize,
+    x: u8, y: u8, width: u8,
+};
+
+const ForrestInhabitantType = enum { tree, creature, rock };
+
+const Forrest = union(ForrestInhabitantType) {
+    const Self = @This();
+    tree: Tree,
+    creature: Creature,
+    rock: Rock,
+
+    // need these boilerplate functions to be able to act as datastor over this union type
+    pub fn setID(self: *Self, id: usize) void {
+        switch (self.*) {
+            .tree => |*tree| tree.id = id,
+            .creature => |*creature| creature.id = id,
+            .rock => |*rock| rock.id = id,
+        }
+    }
+
+    pub fn getID(self: Self) usize {
+        switch (self) {
+            .tree => |tree| return tree.id,
+            .creature => |creature| return creature.id,
+            .rock => |rock| return rock.id,
+        }
+    }
+
+    pub fn free(self: Self, allocator: Allocator) void {
+        switch (self) {
+            .creature => |creature| creature.free(allocator),
+            // only creatures need to be freed
+            else => {},
+        }
+    }
+
+    // adding these functions allows our forrest to act as a heirachy of nodes
+    pub fn setParentID(self: *Self, id: usize) void {
+        switch (self.*) {
+            .tree => |*tree| tree.parent_id = id,
+            .creature => |*creature| creature.parent_id = id,
+            .rock => |*rock| rock.parent_id = id,
+        }
+    }
+
+    pub fn getParentID(self: Self) usize {
+        switch (self) {
+            .tree => |tree| return tree.parent_id,
+            .creature => |creature| return creature.parent_id,
+            .rock => |rock| return rock.parent_id,
+        }
+    }
+};
+
+
+```
+
+## Add some data to the Forrest Datastor
+
+```
+pub fn createTable() !void {
+    const gpa = std.heap.page_allocator;
+
+    var forrestDB = try datastor.Table(Forrest).init(gpa, "db/forrest.db");
+    defer forrestDB.deinit();
+
+    const root_id = try forrestDB.append(.{ .tree = .{ .parent_id = 0, .x = 10, .y = 10, .height = 10 } });
+    {
+        const pine_tree = try forrestDB.append(.{ .tree = .{ .parent_id = root_id, .x = 15, .y = 12, .height = 8 } });
+        {
+            _ = try forrestDB.append(.{ .creature = .{
+                .parent_id = pine_tree,
+                .x = 15,
+                .y = 12,
+                .name = try gpa.dupe(u8, "Squirrel"),
+                .weight = 3,
+            } });
+            _ = try forrestDB.append(.{ .rock = .{ .parent_id = pine_tree, .x = 15, .y = 12, .width = 2 } });
+        }
+        const gum_tree = try forrestDB.append(.{ .tree = .{ .parent_id = root_id, .x = 8, .y = 12, .height = 6 } });
+        {
+            _ = try forrestDB.append(.{ .creature = .{
+                .parent_id = gum_tree,
+                .x = 8,
+                .y = 12,
+                .name = try gpa.dupe(u8, "Koala"),
+                .weight = 10,
+            } });
+            _ = try forrestDB.append(.{ .creature = .{
+                .parent_id = gum_tree,
+                .x = 8,
+                .y = 12,
+                .name = try gpa.dupe(u8, "Kangaroo"),
+                .weight = 20,
+            } });
+        }
+        const weed = try forrestDB.append(.{ .tree = .{ .parent_id = root_id, .x = 5, .y = 5, .height = 2 } });
+        {
+            const moss_rock = try forrestDB.append(.{ .rock = .{ .parent_id = weed, .x = 5, .y = 6, .width = 2 } });
+            {
+                _ = try forrestDB.append(.{ .creature = .{
+                    .parent_id = moss_rock,
+                    .x = 5,
+                    .y = 6,
+                    .name = try gpa.dupe(u8, "Ant"),
+                    .weight = 1,
+                } });
+                _ = try forrestDB.append(.{ .creature = .{
+                    .parent_id = moss_rock,
+                    .x = 5,
+                    .y = 6,
+                    .name = try gpa.dupe(u8, "Wasp"),
+                    .weight = 1,
+                } });
+            }
+        }
+    }
+
+    try forrestDB.save();
+}
+```
+
+## Load and display Tree structured data using recursion
+
+```
+
+const ForrestDB = datastor.Table(Forrest);
+
+pub fn loadTable() !void {
+    const gpa = std.heap.page_allocator;
+    var forrestDB = try ForrestDB.init(gpa, "db/forrest.db");
+    defer forrestDB.deinit();
+
+    try forrestDB.load();
+
+    std.debug.print("Structured display for the contents of the forrest:\n\n", .{});
+    try printForrestRecursive(forrestDB, 0, 0);
+}
+
+fn printForrestRecursive(forrestDB: ForrestDB, parent_id: usize, nesting: usize) !void {
+    const children = try forrestDB.getChildren(parent_id);
+    defer children.deinit();
+
+    for (children.items) |forrest| {
+        if (forrest.getParentID() == parent_id) {
+            for (0..nesting) |_| {
+                std.debug.print("    ", .{});
+            }
+            std.debug.print(" {any}:\n", .{forrest});
+            try printForrestRecursive(forrestDB, forrest.getID(), nesting + 1);
+        }
+    }
+}
+```
+
+produces output :
+
+```
+Structured display for the contents of the forrest:
+
+ forrest.Forrest{ .tree = forrest.Tree{ .id = 1, .parent_id = 0, .x = 10, .y = 10, .height = 10 } }:
+     forrest.Forrest{ .tree = forrest.Tree{ .id = 2, .parent_id = 1, .x = 15, .y = 12, .height = 8 } }:
+         forrest.Forrest{ .creature = .id = 3, .parent_id = 2, .x = 15, .y = 12, .name = Squirrel, .weight = 3 }:
+         forrest.Forrest{ .rock = forrest.Rock{ .id = 4, .parent_id = 2, .x = 15, .y = 12, .width = 2 } }:
+     forrest.Forrest{ .tree = forrest.Tree{ .id = 5, .parent_id = 1, .x = 8, .y = 12, .height = 6 } }:
+         forrest.Forrest{ .creature = .id = 6, .parent_id = 5, .x = 8, .y = 12, .name = Koala, .weight = 10 }:
+         forrest.Forrest{ .creature = .id = 7, .parent_id = 5, .x = 8, .y = 12, .name = Kangaroo, .weight = 20 }:
+     forrest.Forrest{ .tree = forrest.Tree{ .id = 8, .parent_id = 1, .x = 5, .y = 5, .height = 2 } }:
+         forrest.Forrest{ .rock = forrest.Rock{ .id = 9, .parent_id = 8, .x = 5, .y = 6, .width = 2 } }:
+             forrest.Forrest{ .creature = .id = 10, .parent_id = 9, .x = 5, .y = 6, .name = Ant, .weight = 1 }:
+             forrest.Forrest{ .creature = .id = 11, .parent_id = 9, .x = 5, .y = 6, .name = Wasp, .weight = 1 }:
 ```
 
 ---
