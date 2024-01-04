@@ -4,6 +4,7 @@ const dogs = @import("dogs.zig");
 const animals = @import("animals.zig");
 const forrest = @import("forrest.zig");
 const simple = @import("simple.zig");
+const custom = @import("custom_id.zig");
 
 pub fn main() !void {
     std.debug.print("Datastor examples\n", .{});
@@ -11,17 +12,20 @@ pub fn main() !void {
     try simple.createTable();
     try simple.loadTable();
 
+    try custom.createTable();
+    try custom.loadTable();
+
     try cats.createTable();
     try cats.loadTable();
-    try cats.createTimeseries();
-    try cats.createTimeseriesNoIO(); // for measuring IO performance only
+    //     try cats.createTimeseries();
+    //     try cats.createTimeseriesNoIO(); // for measuring IO performance only
 
-    try dogs.createTable();
-    try dogs.createTimeseries();
+    //     try dogs.createTable();
+    //     try dogs.createTimeseries();
 
-    try animals.createTable();
-    try animals.loadTable();
+    //     try animals.createTable();
+    //     try animals.loadTable();
 
-    try forrest.createTable();
-    try forrest.loadTable();
+    //     try forrest.createTable();
+    //     try forrest.loadTable();
 }

@@ -2,12 +2,8 @@ const std = @import("std");
 const datastor = @import("datastor");
 
 pub const SimpleThing = struct {
-    const Self = @This();
-    id: usize = 0,
     x: usize = 0,
     y: usize = 0,
-
-    // nothing gets allocated to create an instance of this, so we dont need a free()
 };
 
 pub fn createTable() !void {
@@ -19,7 +15,7 @@ pub fn createTable() !void {
     std.debug.print("\nSimple Things example - no allocation per thing\n\n", .{});
 
     // create a datastor to store the things
-    var db = try datastor.Table(SimpleThing).init(gpa, "db/things.db");
+    var db = try datastor.Table(usize, SimpleThing).init(gpa, "db/things.db");
     defer db.deinit();
 
     const things = [_]SimpleThing{
@@ -35,7 +31,7 @@ pub fn createTable() !void {
     }
 
     for (db.values(), 0..) |thing, i| {
-        std.debug.print("Thing {d} is ({d},{d})\n", .{ i, thing.x, thing.y });
+        std.debug.print("Thing {d} has id {d} is ({d},{d})\n", .{ i, thing.id, thing.value.x, thing.value.y });
     }
 
     try db.save();
@@ -46,12 +42,12 @@ pub fn loadTable() !void {
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nThing example - load and reload simple data set from table\n\n", .{});
 
-    var db = try datastor.Table(SimpleThing).init(gpa, "db/things.db");
+    var db = try datastor.Table(usize, SimpleThing).init(gpa, "db/things.db");
     defer db.deinit();
 
     try db.load();
     for (db.values(), 0..) |thing, i| {
-        std.debug.print("Thing {d} is ({d},{d})\n", .{ i, thing.x, thing.y });
+        std.debug.print("Thing {d} has id {d} and value ({d},{d})\n", .{ i, thing.id, thing.value.x, thing.value.y });
     }
 
     std.debug.print("------------------------------------------------\n", .{});
@@ -59,6 +55,6 @@ pub fn loadTable() !void {
 
     try db.load();
     for (db.values(), 0..) |thing, i| {
-        std.debug.print("Thing {d} is ({d},{d})\n", .{ i, thing.x, thing.y });
+        std.debug.print("Thing {d} is ({d},{d})\n", .{ i, thing.value.x, thing.value.y });
     }
 }

@@ -2,27 +2,24 @@ const std = @import("std");
 const datastor = @import("datastor");
 
 pub const Cat = struct {
-    id: usize = 0,
     breed: []const u8,
     color: []const u8,
     length: u16,
     aggression: f32,
 
-    const Self = @This();
-
-    pub fn free(self: Self, allocator: std.mem.Allocator) void {
+    pub fn free(self: Cat, allocator: std.mem.Allocator) void {
         allocator.free(self.breed);
         allocator.free(self.color);
     }
 
     // datastor doesnt need this, but its put here as a util function to print out a Cat
-    pub fn format(cat: Self, comptime layout: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+    pub fn format(cat: Cat, comptime layout: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
 
         if (layout.len != 0 and layout[0] != 's')
             @compileError("Unsupported format specifier for Cat type: '" ++ layout ++ "'.");
 
-        try std.fmt.format(writer, "ID: {d} Breed: {s} Color: {s} Length: {d}, Aggression Factor: {:.2}", cat);
+        try std.fmt.format(writer, "Breed: {s} Color: {s} Length: {d}, Aggression Factor: {:.2}", cat);
     }
 };
 
@@ -44,7 +41,7 @@ pub fn createTable() !void {
     std.debug.print("\nCats example - save simple data set to table\n\n", .{});
 
     // create a datastor to store the cats
-    var catDB = try datastor.Table(Cat).init(gpa, "db/cats.db");
+    var catDB = try datastor.Table(usize, Cat).init(gpa, "db/cats.db");
     defer catDB.deinit();
 
     // manually fill in datastor using our example cats seed data, autoincrementing the ID
@@ -61,7 +58,7 @@ pub fn createTable() !void {
     // manually get some cats from the datastore
     for (0..4) |i| {
         if (catDB.get(i + 1)) |cat| {
-            std.debug.print("Cat {d} is {s}\n", .{ i, cat });
+            std.debug.print("Cat {d} id {d} value {s}\n", .{ i, cat.id, cat.value });
         } else std.debug.print("No cat found !!\n", .{});
     }
 
@@ -76,12 +73,12 @@ pub fn loadTable() !void {
     std.debug.print("\nCats example - load simple data set from table\n\n", .{});
 
     // create a datastor to store the cats
-    var catDB = try datastor.Table(Cat).init(gpa, "db/cats.db");
+    var catDB = try datastor.Table(usize, Cat).init(gpa, "db/cats.db");
     defer catDB.deinit();
 
     try catDB.load();
     for (catDB.values(), 0..) |cat, i| {
-        std.debug.print("Cat {d} is {s}\n", .{ i, cat });
+        std.debug.print("Cat {d} has id {d} value {s}\n", .{ i, cat.id, cat.value });
     }
 
     std.debug.print("------------------------------------------------\n", .{});
@@ -90,7 +87,7 @@ pub fn loadTable() !void {
     // calling load again will clear & free the original store and load a fresh new one
     try catDB.load();
     for (catDB.values(), 0..) |cat, i| {
-        std.debug.print("Cat {d} is {s}\n", .{ i, cat });
+        std.debug.print("Cat {d} has id {d} and value {s}\n", .{ i, cat.id, cat.value });
     }
 }
 
