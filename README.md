@@ -96,6 +96,26 @@ const MyDataType = struct {
 
 using Key type `usize`, will create a wrapper object around MyDataType that adds an `id` field of type usize, and several extra convenience functions.
 
+ie
+```zig
+struct {
+  id: usize,
+  value: MyDataType,
+}
+```
+
+When you `put()` or `append()` to the datastor, you pass in `MyDataType`
+
+When you `get()` or iterate over the `values()` in the datastor, you get back the Wrapped type, so you have access to the 
+unique ID associated with your original data.
+
+ie:
+```zig
+for (db.values()) |item| {
+   std.debug.print("Item with ID {d}:", .{item.id});
+   std.debug.print("Value: {}\n", .{item.value});
+}
+```
 ---
 
 TODO - rewrite from here down
