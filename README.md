@@ -87,7 +87,7 @@ Which is a wrapper around your original struct T.
 This ItemType(T) wrapper includes extra fields such as the unique ID of this record, the ID of the parent record, etc.
 
 Example - creating a datastor on this type :
-```java
+```zig
 const MyDataType = struct {
   x: usize,
   y: usize,
@@ -169,7 +169,7 @@ For Tagged Union types, the tagged union must provide 2 functions `getParentID()
 
 ## Define a Cat struct that can be used as a Datastor
 
-```java
+```zig
 const Cat = struct {
     id: usize = 0,
     breed: []const u8,
@@ -189,7 +189,7 @@ const Cat = struct {
 
 ## Load a Datastor based on our Cat struct
 
-```java
+```zig
 pub fn load_simple_table() !void {
     const gpa = std.heap.page_allocator;
 
@@ -217,7 +217,7 @@ pub fn load_simple_table() !void {
 ```
 
 produces output:
-```java
+```zig
 Cat 0 is ID: 1 Breed: Siamese Color: white Length: 30, Aggression Factor: 7.00e-01
 Cat 1 is ID: 2 Breed: Burmese Color: grey Length: 24, Aggression Factor: 6.00e-01
 Cat 2 is ID: 3 Breed: Tabby Color: striped Length: 32, Aggression Factor: 5.00e-01
@@ -244,7 +244,7 @@ the timeseries data to quickly work out what state any Cat is in at a point in t
 
 ## Example - define Timeseries / Event data for each Cat
 
-```java
+```zig
 // A timeseries record of events that are associated with a cat
 const CatEvent = struct {
     parent_id: usize = 0, // parent_id is the ID of the Cat that this event belongs to
@@ -268,7 +268,7 @@ const CatEvent = struct {
 
 ## Example - Load Cats+Timeseries data, and run several different reports
 
-```java
+```zig
 pub fn cats_with_timeseries_data() !void {
     const gpa = std.heap.page_allocator;
 
@@ -344,7 +344,7 @@ pub fn cats_with_timeseries_data() !void {
 ```
 
 produces output :
-```java
+```zig
 ParentID: 1 Timestamp: 1 At 10,10  Attacks: false Kills false Sleeps true Comment: starts at Location
 ParentID: 2 Timestamp: 1 At 20,10  Attacks: false Kills false Sleeps true Comment: starts at Location
 ParentID: 3 Timestamp: 1 At 10,20  Attacks: false Kills false Sleeps true Comment: starts at Location
@@ -413,7 +413,7 @@ Current state of all cats, based on latest event for each
 
 ## Define a Union that can be used in a datastor
 
-```java
+```zig
 const AnimalType = enum { cat, dog };
 
 const Animal = union(AnimalType) {
@@ -448,7 +448,7 @@ const Animal = union(AnimalType) {
 
 ## Save data to a Union datastor
 
-```java
+```zig
 pub fn createTable() !void {
     const gpa = std.heap.page_allocator;
     var animalDB = try datastor.Table(Animal).init(gpa, "db/animals.db");
@@ -483,7 +483,7 @@ pub fn createTable() !void {
 
 ## Load Union data from a datastor
 
-```java
+```zig
 pub fn loadTable() !void {
     const gpa = std.heap.page_allocator;
     var animalDB = try datastor.Table(Animal).init(gpa, "db/animals.db");
@@ -498,7 +498,7 @@ pub fn loadTable() !void {
 
 produces output
 
-```java
+```zig
 Animal 0 is animals.Animal{ .cat = ID: 1 Breed: Siamese Color: Sliver Length: 28, Aggression Factor: 9.00e-01 }:
 Animal 1 is animals.Animal{ .dog = ID: 2 Breed: Colley Color: Black and White Height: 33, Appetite: 9.00e-01 }:
 ```
@@ -509,7 +509,7 @@ Animal 1 is animals.Animal{ .dog = ID: 2 Breed: Colley Color: Black and White He
 
 ## Define a complicated struct that also represents Tree structured data
 
-```java
+```zig
 ////////////////////////////////////////////////////////////////////////////////
 // 3 types of things we can find in the forrest
 
@@ -593,7 +593,7 @@ const Forrest = union(ForrestInhabitantType) {
 
 ## Add some data to the Forrest Datastor
 
-```java
+```zig
 pub fn createTable() !void {
     const gpa = std.heap.page_allocator;
 
@@ -658,7 +658,7 @@ pub fn createTable() !void {
 
 ## Load and display Tree structured data using recursion
 
-```java
+```zig
 
 const ForrestDB = datastor.Table(Forrest);
 
@@ -689,7 +689,7 @@ fn printForrestRecursive(forrestDB: ForrestDB, parent_id: usize, nesting: usize)
 
 produces output :
 
-```java
+```zig
 Structured display for the contents of the forrest:
 
  forrest.Forrest{ .tree = forrest.Tree{ .id = 1, .parent_id = 0, .x = 10, .y = 10, .height = 10 } }:
