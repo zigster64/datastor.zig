@@ -40,8 +40,8 @@ No external DB dependencies, and no DLLs needed.
 
 In concept, A Datastor is a light comptime wrapper around your struct, that provides :
 
-- An ordered HashMap collection of elements, with a numeric SERIAL id
-- Be able to insert records, and autoincrement the id if needed
+- An ordered HashMap collection of elements
+- Be able to insert records, either autoincrement the id, or call a custom function to generate a new key based on the record
 - Functions to load / save that collection to and from disk
 - An unlimited ArrayList of Timeseries events associated with each element in the collection
 - Timeseries handy functions to get element state at a point in time / events over a period, etc
@@ -76,6 +76,30 @@ data, that is frequently appended to.
 The Datastor API then wraps this as a single storage item.
 
 ---
+# Wrapped DataType
+
+For any given struct T, the datastor will maintain a collection of 
+
+ItemType(T)
+
+Which is a wrapper around your original struct T.
+
+This ItemType(T) wrapper includes extra fields such as the unique ID of this record, the ID of the parent record, etc.
+
+Example - creating a datastor on this type :
+```java
+const MyDataType = struct {
+  x: usize,
+  y: usize,
+}
+```
+
+using Key type `usize`, will create a wrapper object around MyDataType that adds an `id` field of type usize, and several extra convenience functions.
+
+---
+
+TODO - rewrite from here down
+
 
 # API Overview
 
@@ -83,15 +107,15 @@ The Datastor API then wraps this as a single storage item.
 
 | Function | Description |
 |----------|-------------|
-| Table(comptime T:type) |  Returns a Table object that wraps a collection of (struct) T<br><br>T must have a field named `id:usize` that uniquely identifies the record<br>T must have a function `free()` if it contains fields that are allocated on load (such as strings) | 
+| Table(comptime K:type, comptime T:type) |  Returns a Table object that wraps a collection of (struct) T<br><br>T must have a function `free()` if it contains fields that are allocated on load (such as strings) | 
 | table.init(Allocator, filename: []const u8) | Initialises the Table |
 | table.deinit()                              | Free any memory resources consumed by the Table |
 | | |
 | table.load() !void                          | Explicitly load the collection from disk |
 | table.save() !void                          | Explicitly save the data to disk |
 | | |
-| table.values() []T                          | Returns a slice of all the values in the Table, in insertion order |
-| table.get(id) ?T                            | Gets the element of type T, with the given ID (or null if not found) |
+| table.values() []Item                          | Returns a slice of all the values in the Table, in insertion order |
+| table.get(id) ?Item                            | Gets the element of type T, with the given ID (or null if not found) |
 | | |
 | table.put(T)                                | Add or overwrite element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
 | table.append(T) usize  (Autoincrement !)          | Adds a new element of type T to the table, setting the ID of the new record to the next value in sequence. Returns the new ID |
@@ -145,7 +169,7 @@ For Tagged Union types, the tagged union must provide 2 functions `getParentID()
 
 ## Define a Cat struct that can be used as a Datastor
 
-```
+```java
 const Cat = struct {
     id: usize = 0,
     breed: []const u8,
@@ -165,7 +189,7 @@ const Cat = struct {
 
 ## Load a Datastor based on our Cat struct
 
-```
+```java
 pub fn load_simple_table() !void {
     const gpa = std.heap.page_allocator;
 
@@ -193,7 +217,7 @@ pub fn load_simple_table() !void {
 ```
 
 produces output:
-```
+```java
 Cat 0 is ID: 1 Breed: Siamese Color: white Length: 30, Aggression Factor: 7.00e-01
 Cat 1 is ID: 2 Breed: Burmese Color: grey Length: 24, Aggression Factor: 6.00e-01
 Cat 2 is ID: 3 Breed: Tabby Color: striped Length: 32, Aggression Factor: 5.00e-01
@@ -220,7 +244,7 @@ the timeseries data to quickly work out what state any Cat is in at a point in t
 
 ## Example - define Timeseries / Event data for each Cat
 
-```
+```java
 // A timeseries record of events that are associated with a cat
 const CatEvent = struct {
     parent_id: usize = 0, // parent_id is the ID of the Cat that this event belongs to
@@ -244,7 +268,7 @@ const CatEvent = struct {
 
 ## Example - Load Cats+Timeseries data, and run several different reports
 
-```
+```java
 pub fn cats_with_timeseries_data() !void {
     const gpa = std.heap.page_allocator;
 
@@ -320,7 +344,7 @@ pub fn cats_with_timeseries_data() !void {
 ```
 
 produces output :
-```
+```java
 ParentID: 1 Timestamp: 1 At 10,10  Attacks: false Kills false Sleeps true Comment: starts at Location
 ParentID: 2 Timestamp: 1 At 20,10  Attacks: false Kills false Sleeps true Comment: starts at Location
 ParentID: 3 Timestamp: 1 At 10,20  Attacks: false Kills false Sleeps true Comment: starts at Location
@@ -389,7 +413,7 @@ Current state of all cats, based on latest event for each
 
 ## Define a Union that can be used in a datastor
 
-```
+```java
 const AnimalType = enum { cat, dog };
 
 const Animal = union(AnimalType) {
@@ -424,7 +448,7 @@ const Animal = union(AnimalType) {
 
 ## Save data to a Union datastor
 
-```
+```java
 pub fn createTable() !void {
     const gpa = std.heap.page_allocator;
     var animalDB = try datastor.Table(Animal).init(gpa, "db/animals.db");
@@ -459,7 +483,7 @@ pub fn createTable() !void {
 
 ## Load Union data from a datastor
 
-```
+```java
 pub fn loadTable() !void {
     const gpa = std.heap.page_allocator;
     var animalDB = try datastor.Table(Animal).init(gpa, "db/animals.db");
@@ -474,7 +498,7 @@ pub fn loadTable() !void {
 
 produces output
 
-```
+```java
 Animal 0 is animals.Animal{ .cat = ID: 1 Breed: Siamese Color: Sliver Length: 28, Aggression Factor: 9.00e-01 }:
 Animal 1 is animals.Animal{ .dog = ID: 2 Breed: Colley Color: Black and White Height: 33, Appetite: 9.00e-01 }:
 ```
@@ -485,7 +509,7 @@ Animal 1 is animals.Animal{ .dog = ID: 2 Breed: Colley Color: Black and White He
 
 ## Define a complicated struct that also represents Tree structured data
 
-```
+```java
 ////////////////////////////////////////////////////////////////////////////////
 // 3 types of things we can find in the forrest
 
@@ -569,7 +593,7 @@ const Forrest = union(ForrestInhabitantType) {
 
 ## Add some data to the Forrest Datastor
 
-```
+```java
 pub fn createTable() !void {
     const gpa = std.heap.page_allocator;
 
@@ -634,7 +658,7 @@ pub fn createTable() !void {
 
 ## Load and display Tree structured data using recursion
 
-```
+```java
 
 const ForrestDB = datastor.Table(Forrest);
 
@@ -665,7 +689,7 @@ fn printForrestRecursive(forrestDB: ForrestDB, parent_id: usize, nesting: usize)
 
 produces output :
 
-```
+```java
 Structured display for the contents of the forrest:
 
  forrest.Forrest{ .tree = forrest.Tree{ .id = 1, .parent_id = 0, .x = 10, .y = 10, .height = 10 } }:
