@@ -160,19 +160,26 @@ pub fn createTimeseries() !void {
     try catDB.load();
 
     // create a new Events stream for the cats
-    var catEvents = try datastor.Events(usize, CatAction).init(gpa, "db/cats.events");
-    defer catEvents.deinit();
+    var eventDB = try datastor.Events(usize, CatAction).init(gpa, "db/cats.events");
+    defer eventDB.deinit();
 
-    std.debug.print("\nExpecting that the timeseries data for all cats should be empty here, found = {d}\n", .{catEvents.countAll()});
+    std.debug.print("\nExpecting that the timeseries data for all cats should be empty here, found = {d}\n", .{eventDB.getCount()});
 
     // manually setup the timeseries events to setup the events table on disk
     for (cat_events) |event| {
-        try catEvents.appendWithTimestamp(event.parent_id, event.timestamp, event.value);
+        try eventDB.appendWithTimestamp(event.parent_id, event.timestamp, CatAction{
+            .x = event.value.x,
+            .y = event.value.y,
+            .attacks = event.value.attacks,
+            .kills = event.value.kills,
+            .sleep = event.value.sleep,
+            .description = try gpa.dupe(u8, event.value.description),
+        });
     }
 
     // print out all the events in timestamp order
     std.debug.print("After all events created, expect a list of events in timestamp order:\n", .{});
-    for (catEvents.getAll()) |event| {
+    for (eventDB.getAll()) |event| {
         std.debug.print("ID: {d} Time: {d} Action: {s}", .{ event.parent_id, event.timestamp, event.value });
     }
 
@@ -180,10 +187,17 @@ pub fn createTimeseries() !void {
     std.debug.print("\nAll cats with audit trail:\n", .{});
     for (catDB.items()) |cat| {
         std.debug.print("Cat {s}\n", .{cat});
-        const events = try catEvents.for(cat.id);
+        const events = try eventDB.getFor(cat.id);
         defer events.deinit();
         for (events.items) |event| {
-            std.debug.print("  - At {d}: {s} -> moves to ({d},{d}) status: (Asleep:{any}, Attacking:{any})\n", .{ event.timestamp, event.value.description, event.value.x, event.value.y, event.value.sleep, event.value.attacks });
+            std.debug.print("  - At {d}: {s} -> moves to ({d},{d}) status: (Asleep:{any}, Attacking:{any})\n", .{
+                event.timestamp,
+                event.value.description,
+                event.value.x,
+                event.value.y,
+                event.value.sleep,
+                event.value.attacks,
+            });
         }
     }
 
@@ -192,8 +206,16 @@ pub fn createTimeseries() !void {
         const t: i64 = @as(i64, @intCast(i * 10 + 1));
         std.debug.print("\nState of all cats at Timestamp {d}\n", .{t});
         for (catDB.items()) |cat| {
-            if (catDB.at(cat.id, t)) |e| {
-                std.debug.print("  - {s} {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n", .{ cat.breed, e.value.description, e.timestamp, e.value.x, e.value.y, e.value.sleep, e.value.attacks });
+            if (eventDB.getForAt(cat.id, t)) |e| {
+                std.debug.print("  - {s} {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n", .{
+                    cat.value.breed,
+                    e.value.description,
+                    e.timestamp,
+                    e.value.x,
+                    e.value.y,
+                    e.value.sleep,
+                    e.value.attacks,
+                });
             } else unreachable;
         }
     }
@@ -201,57 +223,15 @@ pub fn createTimeseries() !void {
     // get the latest status for each cat
     std.debug.print("\nCurrent state of all cats, based on latest event for each\n", .{});
     for (catDB.items()) |cat| {
-        const e = catDB.latestEvent(cat.id).?;
-        std.debug.print("  - {s} is currently doing - {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n", .{ cat.breed, e.value.description, e.timestamp, e.value.x, e.value.y, e.value.sleep, e.value.attacks });
+        const e = eventDB.getLatestFor(cat.id).?;
+        std.debug.print("  - {s} is currently doing - {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n", .{
+            cat.value.breed,
+            e.value.description,
+            e.timestamp,
+            e.value.x,
+            e.value.y,
+            e.value.sleep,
+            e.value.attacks,
+        });
     }
-}
-
-pub fn createTimeseriesNoIO() !void {
-    // start with no timeseries data on file
-    std.os.unlink("db/cats.events") catch {};
-
-    const gpa = std.heap.page_allocator;
-
-    const t1 = std.time.microTimestamp();
-    var catDB = try datastor.TableWithTimeseries(Cat, CatEvent).init(gpa, "db/cats.db", "db/cats.events");
-    defer catDB.deinit();
-
-    // load both the base table, and all the events for all cats
-    try catDB.load();
-
-    // manually setup the timeseries events to setup the events table on disk
-    for (cat_events) |event| {
-        try catDB.addEvent(event);
-    }
-
-    const t2 = std.time.microTimestamp();
-
-    // print out all the events in timestamp order
-    for (catDB.getAllEvents()) |event| {
-        _ = event;
-    }
-
-    // now print out Cats in the datastor, along with an audit trail of events for each cat
-    for (catDB.items()) |cat| {
-        const events = try catDB.getEventsFor(cat.id);
-        defer events.deinit();
-        for (events.items) |event| {
-            _ = event;
-        }
-    }
-
-    // iterate through 4 timestamps and show the state of all cats at the given timestamp
-    for (0..4) |i| {
-        for (catDB.items()) |cat| {
-            if (catDB.eventAt(cat.id, @intCast(i * 10 + 1))) |_| {} else unreachable;
-        }
-    }
-
-    // get the latest status for each cat
-    for (catDB.items()) |cat| {
-        const e = catDB.latestEvent(cat.id).?;
-        _ = e;
-    }
-    const t3 = std.time.microTimestamp();
-    std.debug.print("\nCreated DB and added events in {d}us\nExecuted all queries in {d}us\n", .{ t2 - t1, t3 - t2 });
 }

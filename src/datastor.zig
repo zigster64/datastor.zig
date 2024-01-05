@@ -24,6 +24,13 @@ pub fn Item(comptime K: type, comptime T: type) type {
             }
             return count;
         }
+
+        pub fn format(item: Self, comptime layout: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+            _ = options;
+            _ = layout;
+
+            try std.fmt.format(writer, "id: {any} value: {}", .{ item.id, item.value });
+        }
     };
 }
 
@@ -135,6 +142,7 @@ pub fn Table(comptime K: type, comptime T: type) type {
         pub fn getChildrenCount(self: Self, parent_id: K) !usize {
             var count: usize = 0;
             for (self.list.values()) |value| {
+                // TODO equality operator
                 if (value.parent_id == parent_id) {
                     count += 1;
                 }
@@ -145,6 +153,7 @@ pub fn Table(comptime K: type, comptime T: type) type {
         pub fn getChildren(self: Self, parent_id: usize) !ArrayType {
             var children = ArrayType.init(self.allocator);
             for (self.list.values()) |value| {
+                // TODO equality operator
                 if (value.parent_id == parent_id) {
                     try children.append(value);
                 }
@@ -169,6 +178,13 @@ pub fn Event(comptime PK: type, comptime T: type) type {
             if (std.meta.hasFn(T, "free")) {
                 self.value.free(allocator);
             }
+        }
+
+        pub fn format(event: Self, comptime layout: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+            _ = options;
+            _ = layout;
+
+            try std.fmt.format(writer, "parent_id: {any} timestamp: {d} value: {}", .{ event.parent_id, event.timestamp, event.value });
         }
     };
 }
@@ -206,8 +222,40 @@ pub fn Events(comptime K: type, comptime T: type) type {
             self.allocator.free(self.filename);
         }
 
-        pub fn countAll(self: Self) usize {
+        pub fn getCount(self: Self) usize {
             return self.list.items.len;
+        }
+
+        pub fn getCountFor(self: Self, parent_id: K) usize {
+            var count: usize = 0;
+            for (self.list.items) |item| {
+                // TODO equality operator
+                if (item.parent_id == parent_id) {
+                    count += 1;
+                }
+            }
+            return count;
+        }
+
+        pub fn load(self: *Self) !void {
+            self.mutex.lock();
+            defer self.mutex.unlock();
+
+            // clean out and free the old list before loading / allocating a new one
+            self.freeItems();
+            self.list.clearAndFree();
+
+            const file = try std.fs.cwd().openFile(self.filename, .{});
+            defer file.close();
+            while (true) {
+                const event = s2s.deserializeAlloc(file.reader(), EventType, self.allocator) catch |err| {
+                    switch (err) {
+                        error.EndOfStream => return, // this is expected
+                        else => return err,
+                    }
+                };
+                try self.list.append(event);
+            }
         }
 
         pub fn append(self: *Self, parent_id: K, value: T) !void {
@@ -241,11 +289,10 @@ pub fn Events(comptime K: type, comptime T: type) type {
         }
 
         // for returns a list of events FOR the given parent
-        pub fn for(self: Self, parent_id: K) ListType {
+        pub fn getFor(self: Self, parent_id: K) !ListType {
             var events = ListType.init(self.allocator);
             for (self.list.items) |item| {
-                // TODO - need some way of comparing key values for equality
-                // this code here will work fine for usize, but not some other types
+                // TODO equality operator
                 if (item.parent_id == parent_id) {
                     try events.append(item);
                 }
@@ -253,15 +300,44 @@ pub fn Events(comptime K: type, comptime T: type) type {
             return events;
         }
 
-        pub fn at(self: Self, parent_id: K, timestamp: i64) ?EventType {
+        pub fn getAt(self: Self, timestamp: i64) ?EventType {
             var last_event: ?EventType = null;
             for (self.list.items) |event| {
                 if (event.timestamp > timestamp) return last_event;
-                // TODO - need some way of comparing key values for equality
-                // this code here will work fine for usize, but not some other types
+                last_event = event;
+            }
+            return last_event;
+        }
+
+        pub fn getForAt(self: Self, parent_id: K, timestamp: i64) ?EventType {
+            var last_event: ?EventType = null;
+            for (self.list.items) |event| {
+                if (event.timestamp > timestamp) return last_event;
+                // TODO equality operator
                 if (event.parent_id == parent_id) last_event = event;
             }
             return last_event;
+        }
+
+        pub fn getLatest(self: Self) ?EventType {
+            const i = self.list.items.len;
+            if (i > 0) {
+                return self.list[i - 1];
+            }
+            return null;
+        }
+
+        pub fn getLatestFor(self: Self, parent_id: K) ?EventType {
+            var i = self.list.items.len;
+            while (i > 0) {
+                i -= 1;
+                const event = self.list.items[i];
+                // TODO equality operator
+                if (event.parent_id == parent_id) {
+                    return event;
+                }
+            }
+            return null;
         }
     };
 }

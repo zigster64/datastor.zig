@@ -27,10 +27,11 @@ pub fn main() !void {
     std.debug.print("================================================\n", .{});
     std.debug.print("CATS with TIMESERIES events examples\n", .{});
     try cats.createTimeseries();
-    //     try cats.createTimeseriesNoIO(); // for measuring IO performance only
 
-    //     try dogs.createTable();
-    //     try dogs.createTimeseries();
+    std.debug.print("================================================\n", .{});
+    std.debug.print("DOGS with TIMESERIES events examples\n", .{});
+    try dogs.createTable();
+    try dogs.createTimeseries();
 
     //     try animals.createTable();
     //     try animals.loadTable();

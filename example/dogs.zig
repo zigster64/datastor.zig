@@ -2,7 +2,6 @@ const std = @import("std");
 const datastor = @import("datastor");
 
 pub const Dog = struct {
-    id: usize = 0,
     breed: []const u8,
     color: []const u8,
     height: u16,
@@ -22,7 +21,7 @@ pub const Dog = struct {
         if (layout.len != 0 and layout[0] != 's')
             @compileError("Unsupported format specifier for Dog type: '" ++ layout ++ "'.");
 
-        try std.fmt.format(writer, "ID: {d} Breed: {s} Color: {s} Height: {d}, Appetite: {:.2}", dog);
+        try std.fmt.format(writer, "Breed: {s} Color: {s} Height: {d}, Appetite: {:.2}", dog);
     }
 };
 
@@ -44,13 +43,13 @@ pub fn createTable() !void {
     std.debug.print("\nDogs example - save simple data set to table\n\n", .{});
 
     // create a datastor to store the dog
-    var dogDB = try datastor.Table(Dog).init(gpa, "db/dogs.db");
+    var dogDB = try datastor.Table(usize, Dog).init(gpa, "db/dogs.db");
     defer dogDB.deinit();
 
     // manually fill in datastor using our example dog seed data, autoincrementing the ID
     // deliberately create a new dog on the heap, duplicating all its components
     for (dogs) |dog| {
-        _ = try dogDB.append(Dog{
+        _ = try dogDB.append(.{
             .breed = try gpa.dupe(u8, dog.breed),
             .color = try gpa.dupe(u8, dog.color),
             .height = dog.height,
@@ -71,8 +70,6 @@ pub fn createTable() !void {
 
 // A timeseries record of events that are associated with a dog
 pub const DogEvent = struct {
-    parent_id: usize = 0,
-    timestamp: i64,
     x: u16,
     y: u16,
     running: bool,
@@ -95,10 +92,8 @@ pub const DogEvent = struct {
 
         try std.fmt.format(
             writer,
-            "ParentID: {d} Timestamp: {d} At {d},{d}  Running: {any} Eating {any} Sleeping {any} Comment: {s}\n",
+            "Location {d},{d}  Running: {any} Eating {any} Sleeping {any} Comment: {s}\n",
             .{
-                self.parent_id,
-                self.timestamp,
                 self.x,
                 self.y,
                 self.running,
@@ -110,20 +105,25 @@ pub const DogEvent = struct {
     }
 };
 
+const Event = struct {
+    parent_id: usize,
+    timestamp: i64,
+    value: DogEvent,
+};
 // Some seed data to boot up the dog events timeseries data
-const dog_events = [_]DogEvent{
-    .{ .parent_id = 1, .timestamp = 1, .x = 10, .y = 10, .running = false, .eating = false, .sleeping = true, .description = "starts at Location" },
-    .{ .parent_id = 2, .timestamp = 1, .x = 20, .y = 10, .running = false, .eating = false, .sleeping = true, .description = "starts at Location" },
-    .{ .parent_id = 3, .timestamp = 1, .x = 10, .y = 20, .running = false, .eating = false, .sleeping = true, .description = "starts at Location" },
-    .{ .parent_id = 4, .timestamp = 1, .x = 20, .y = 20, .running = false, .eating = false, .sleeping = true, .description = "starts at Location" },
-    .{ .parent_id = 1, .timestamp = 10, .x = 10, .y = 10, .running = false, .eating = false, .sleeping = false, .description = "awakes" },
-    .{ .parent_id = 1, .timestamp = 20, .x = 20, .y = 10, .running = true, .eating = false, .sleeping = false, .description = "runs" },
-    .{ .parent_id = 2, .timestamp = 21, .x = 20, .y = 10, .running = false, .eating = false, .sleeping = false, .description = "awakes" },
-    .{ .parent_id = 3, .timestamp = 21, .x = 10, .y = 20, .running = false, .eating = false, .sleeping = false, .description = "awakes" },
-    .{ .parent_id = 2, .timestamp = 25, .x = 20, .y = 10, .running = true, .eating = false, .sleeping = false, .description = "runs" },
-    .{ .parent_id = 3, .timestamp = 29, .x = 10, .y = 20, .running = false, .eating = false, .sleeping = true, .description = "goes back to sleep" },
-    .{ .parent_id = 4, .timestamp = 30, .x = 20, .y = 20, .running = false, .eating = false, .sleeping = false, .description = "awakes from all the commotion" },
-    .{ .parent_id = 4, .timestamp = 40, .x = 20, .y = 10, .running = true, .eating = false, .sleeping = false, .description = "runs" },
+const dog_events = [_]Event{
+    .{ .parent_id = 1, .timestamp = 1, .value = .{ .x = 10, .y = 10, .running = false, .eating = false, .sleeping = true, .description = "starts at Location" } },
+    .{ .parent_id = 2, .timestamp = 1, .value = .{ .x = 20, .y = 10, .running = false, .eating = false, .sleeping = true, .description = "starts at Location" } },
+    .{ .parent_id = 3, .timestamp = 1, .value = .{ .x = 10, .y = 20, .running = false, .eating = false, .sleeping = true, .description = "starts at Location" } },
+    .{ .parent_id = 4, .timestamp = 1, .value = .{ .x = 20, .y = 20, .running = false, .eating = false, .sleeping = true, .description = "starts at Location" } },
+    .{ .parent_id = 1, .timestamp = 10, .value = .{ .x = 10, .y = 10, .running = false, .eating = false, .sleeping = false, .description = "awakes" } },
+    .{ .parent_id = 1, .timestamp = 20, .value = .{ .x = 20, .y = 10, .running = true, .eating = false, .sleeping = false, .description = "runs" } },
+    .{ .parent_id = 2, .timestamp = 21, .value = .{ .x = 20, .y = 10, .running = false, .eating = false, .sleeping = false, .description = "awakes" } },
+    .{ .parent_id = 3, .timestamp = 21, .value = .{ .x = 10, .y = 20, .running = false, .eating = false, .sleeping = false, .description = "awakes" } },
+    .{ .parent_id = 2, .timestamp = 25, .value = .{ .x = 20, .y = 10, .running = true, .eating = false, .sleeping = false, .description = "runs" } },
+    .{ .parent_id = 3, .timestamp = 29, .value = .{ .x = 10, .y = 20, .running = false, .eating = false, .sleeping = true, .description = "goes back to sleep" } },
+    .{ .parent_id = 4, .timestamp = 30, .value = .{ .x = 20, .y = 20, .running = false, .eating = false, .sleeping = false, .description = "awakes from all the commotion" } },
+    .{ .parent_id = 4, .timestamp = 40, .value = .{ .x = 20, .y = 10, .running = true, .eating = false, .sleeping = false, .description = "runs" } },
 };
 
 pub fn createTimeseries() !void {
@@ -134,51 +134,98 @@ pub fn createTimeseries() !void {
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nDogs example - Dogs TableTimeseries boot initial data\n\n", .{});
 
-    var dogDB = try datastor.TableWithTimeseries(Dog, DogEvent).init(gpa, "db/dogs.db", "db/dogs.events");
+    var dogDB = try datastor.Table(usize, Dog).init(gpa, "db/dogs.db");
     defer dogDB.deinit();
-
-    // load both the base table, and all the events for all dogs
     try dogDB.load();
 
-    std.debug.print("\nExpecting that the timeseries data for all dogs should be empty here, found = {d}\n", .{dogDB.eventCount()});
+    var eventDB = try datastor.Events(usize, DogEvent).init(gpa, "db/dogs.events");
+    defer eventDB.deinit();
+
+    // load from a non-existant file, should do nothing, and not crash freeing things that dont need to be freed
+    eventDB.load() catch |err| {
+        std.debug.print("Initial load of db/dogs.events == {any}\n", .{err});
+    };
+
+    std.debug.print("\nExpecting that the timeseries data for all dogs should be empty here, found = {d}\n", .{eventDB.getCount()});
 
     // manually setup the timeseries events to setup the events table on disk
     for (dog_events) |event| {
-        try dogDB.addEvent(event);
+        try eventDB.appendWithTimestamp(event.parent_id, event.timestamp, DogEvent{
+            .x = event.value.x,
+            .y = event.value.y,
+            .running = event.value.running,
+            .eating = event.value.eating,
+            .sleeping = event.value.sleeping,
+            .description = try gpa.dupe(u8, event.value.description),
+        });
     }
 
     // print out all the events in timestamp order
     std.debug.print("After all events loaded, expect a list of events in timestamp order:\n", .{});
-    for (dogDB.getAllEvents()) |event| {
+    for (eventDB.getAll()) |event| {
+        std.debug.print("{s}", .{event});
+    }
+
+    // now re-load the events from disk
+    std.debug.print("Re-load all the events from disk, should clean up the old ones and create a fresh new set, without leaks\n", .{});
+    try eventDB.load();
+
+    for (eventDB.getAll()) |event| {
         std.debug.print("{s}", .{event});
     }
 
     // now print out Dogs in the datastor, along with an audit trail of events for each dog
     std.debug.print("\nAll dogs with audit trail:\n", .{});
-    for (dogDB.values()) |dog| {
+    for (dogDB.items()) |dog| {
         std.debug.print("Dog {s}\n", .{dog});
-        const events = try dogDB.getEventsFor(dog.id);
-        for (events.items) |event| {
-            std.debug.print("  - At {d}: {s} -> moves to ({d},{d}) status: (Asleep:{any}, Running:{any}, Eating:{any})\n", .{ event.timestamp, event.description, event.x, event.y, event.sleeping, event.running, event.eating });
-        }
+        const events = try eventDB.getFor(dog.id);
         defer events.deinit();
+        for (events.items) |event| {
+            std.debug.print("  - At {d}: {s} -> moves to ({d},{d}) status: (Asleep:{any}, Running:{any}, Eating:{any})\n", .{
+                event.timestamp,
+                event.value.description,
+                event.value.x,
+                event.value.y,
+                event.value.sleeping,
+                event.value.running,
+                event.value.eating,
+            });
+        }
     }
 
     // iterate through 4 timestamps and show the state of all dogs at the given timestamp
     for (0..4) |i| {
         const t: i64 = @as(i64, @intCast(i * 10 + 1));
         std.debug.print("\nState of all dogs at Timestamp {d}\n", .{t});
-        for (dogDB.values()) |dog| {
-            if (dogDB.eventAt(dog.id, t)) |e| {
-                std.debug.print("  - {s} {s} since {d} at ({d},{d}) status: (Asleep: {any}, Running: {any}, Eating:{any})\n", .{ dog.breed, e.description, e.timestamp, e.x, e.y, e.sleeping, e.running, e.eating });
+        for (dogDB.items()) |dog| {
+            if (eventDB.getForAt(dog.id, t)) |e| {
+                std.debug.print("  - {s} {s} since {d} at ({d},{d}) status: (Asleep: {any}, Running: {any}, Eating:{any})\n", .{
+                    dog.value.breed,
+                    e.value.description,
+                    e.timestamp,
+                    e.value.x,
+                    e.value.y,
+                    e.value.sleeping,
+                    e.value.running,
+                    e.value.eating,
+                });
             } else unreachable;
         }
     }
 
     // get the latest status for each dog
     std.debug.print("\nCurrent state of all dogs, based on latest event for each\n", .{});
-    for (dogDB.values()) |dog| {
-        const e = dogDB.latestEvent(dog.id).?;
-        std.debug.print("  - {s} is currently doing - {s} since {d} at ({d},{d}) status: (Asleep: {any}, Running: {any}, Eating:{any})\n", .{ dog.breed, e.description, e.timestamp, e.x, e.y, e.sleeping, e.running, e.eating });
+    for (dogDB.items()) |dog| {
+        const e = eventDB.getLatestFor(dog.id).?;
+        std.debug.print("  - {s} is currently doing - {s} since {d} at ({d},{d}) status: (Asleep: {any}, Running: {any}, Eating:{any})\n", .{
+            dog.value.breed,
+            e.value.description,
+            e.timestamp,
+            e.value.x,
+            e.value.y,
+            e.value.sleeping,
+            e.value.running,
+            e.value.eating,
+        });
     }
 }
