@@ -42,7 +42,7 @@ pub fn createTable() !void {
         _ = try db.append(thing);
     }
 
-    for (db.values(), 0..) |thing, i| {
+    for (db.items(), 0..) |thing, i| {
         std.debug.print("Thing {d} has id {s} and value ({d},{d})\n", .{ i, thing.id, thing.value.x, thing.value.y });
     }
 
@@ -58,7 +58,7 @@ pub fn loadTable() !void {
     defer db.deinit();
 
     try db.load();
-    for (db.values(), 0..) |thing, i| {
+    for (db.items(), 0..) |thing, i| {
         std.debug.print("Thing {d} has id {s} and value ({d},{d})\n", .{ i, thing.id, thing.value.x, thing.value.y });
     }
 
@@ -66,7 +66,7 @@ pub fn loadTable() !void {
     std.debug.print("\nReload ... should handle without needing to call free() \n\n", .{});
 
     try db.load();
-    for (db.values(), 0..) |thing, i| {
+    for (db.items(), 0..) |thing, i| {
         std.debug.print("Thing {d} has id {s} and value ({d},{d})\n", .{ i, thing.id, thing.value.x, thing.value.y });
     }
 }

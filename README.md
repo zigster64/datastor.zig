@@ -106,12 +106,12 @@ struct {
 
 When you `put()` or `append()` to the datastor, you pass in `MyDataType`
 
-When you `get()` or iterate over the `values()` in the datastor, you get back the Wrapped type, so you have access to the 
+When you `get()` or iterate over the `items()` in the datastor, you get back the Wrapped type, so you have access to the 
 unique ID associated with your original data.
 
 ie:
 ```zig
-for (db.values()) |item| {
+for (db.items()) |item| {
    std.debug.print("Item with ID {d}:", .{item.id});
    std.debug.print("Value: {}\n", .{item.value});
 }
@@ -134,11 +134,12 @@ TODO - rewrite from here down
 | table.load() !void                          | Explicitly load the collection from disk |
 | table.save() !void                          | Explicitly save the data to disk |
 | | |
-| table.values() []Item                          | Returns a slice of all the values in the Table, in insertion order |
+| table.items() []Item                          | Returns a slice of all the items in the Table, in insertion order |
 | table.get(id) ?Item                            | Gets the element of type T, with the given ID (or null if not found) |
 | | |
 | table.put(T)                                | Add or overwrite element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
-| table.append(T) usize  (Autoincrement !)          | Adds a new element of type T to the table, setting the ID of the new record to the next value in sequence. Returns the new ID |
+| table.append(T) usize  (Autoincrement !)          | Adds a new element of type T to the table, setting the ID of the new record to the next value in sequence. Returns the new ID<br><br>If the base type has a function `newID(count: usize) KeyType`, then it uses that to get the next Key value |
+
 
 Autoincrement note - Datatsor calculates the 'next sequence' as `Table.len + 1`, which is quick and simple enough. 
 If loading data into a datastor, then use one method or the other, but avoid mixing them together, as the ID forms the key in the hashtable.
@@ -154,7 +155,7 @@ If loading data into a datastor, then use one method or the other, but avoid mix
 | table.load() !void                          | Explicitly load the collection from disk |
 | table.save() !void                          | Explicitly save the data to disk |
 | | |
-| table.values() []T                          | Returns a slice of all the values in the Table, in insertion order |
+| table.items() []T                          | Returns a slice of all the items in the Table, in insertion order |
 | table.get(id) ?T                           | Gets the element of type T, with the given ID (or null if not found) |
 | | |
 | table.put(T)                                | Add or overwrite element of type T to the Table. Does not write to disk yet. Batch up many updates, then call `save()` once | 
@@ -218,7 +219,7 @@ pub fn load_simple_table() !void {
     try catDB.load();
 
     // print out all the cats 
-    for (catDB.values() |cat| {
+    for (catDB.items() |cat| {
         std.debug.print("Cat {d} is a {s} {s}, that is {d} inches long, with an aggression rating of {:.2f}\n", .{
             cat.id,
             cat.color,
@@ -313,7 +314,7 @@ pub fn cats_with_timeseries_data() !void {
     // now print out Cats in the datastor,
     // along with an audit trail of events for each cat
     std.debug.print("\nAll cats with full audit trail:\n", .{});
-    for (catDB.values()) |cat| {
+    for (catDB.items()) |cat| {
         std.debug.print("Cat {s}\n", .{cat});
         const events = try catDB.getEventsFor(cat.id);
         defer events.deinit();
@@ -331,7 +332,7 @@ pub fn cats_with_timeseries_data() !void {
     for (0..4) |i| {
         const t = i * 10 + 1;
         std.debug.print("\nState of all cats at Timestamp {d}\n", .{t});
-        for (catDB.values()) |cat| {
+        for (catDB.items()) |cat| {
             if (catDB.eventAt(cat.id, @intCast(t))) |e| {
                 std.debug.print("  - {s} {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n",
                 .{
@@ -348,7 +349,7 @@ pub fn cats_with_timeseries_data() !void {
 
     // get the latest status for each cat
     std.debug.print("\nCurrent state of all cats, based on latest event for each\n", .{});
-    for (catDB.values()) |cat| {
+    for (catDB.items()) |cat| {
         const e = catDB.latestEvent(cat.id).?;
         std.debug.print("  - {s} is currently doing - {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n",
             .{
@@ -477,7 +478,7 @@ pub fn createTable() !void {
     // add a cat
     try animalDB.append(Animal{
         .cat = .{
-            // NOTE - we dupe these values onto the heap, because we want these strings 
+            // NOTE - we dupe these items onto the heap, because we want these strings 
             // to live beyond the scope of just this function
             .breed = try gpa.dupe(u8, "Siamese"),
             .color = try gpa.dupe(u8, "Sliver"),
@@ -510,7 +511,7 @@ pub fn loadTable() !void {
     defer animalDB.deinit();
 
     try animalDB.load();
-    for (animalDB.values(), 0..) |animal, i| {
+    for (animalDB.items(), 0..) |animal, i| {
         std.debug.print("Animal {d} is {any}:\n", .{ i, animal });
     }
 }

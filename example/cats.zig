@@ -77,7 +77,7 @@ pub fn loadTable() !void {
     defer catDB.deinit();
 
     try catDB.load();
-    for (catDB.values(), 0..) |cat, i| {
+    for (catDB.items(), 0..) |cat, i| {
         std.debug.print("Cat {d} has id {d} value {s}\n", .{ i, cat.id, cat.value });
     }
 
@@ -86,15 +86,13 @@ pub fn loadTable() !void {
 
     // calling load again will clear & free the original store and load a fresh new one
     try catDB.load();
-    for (catDB.values(), 0..) |cat, i| {
+    for (catDB.items(), 0..) |cat, i| {
         std.debug.print("Cat {d} has id {d} and value {s}\n", .{ i, cat.id, cat.value });
     }
 }
 
 // A timeseries record of events that are associated with a cat
-pub const CatEvent = struct {
-    parent_id: usize = 0,
-    timestamp: i64,
+pub const CatAction = struct {
     x: u16,
     y: u16,
     attacks: bool,
@@ -117,10 +115,8 @@ pub const CatEvent = struct {
 
         try std.fmt.format(
             writer,
-            "ParentID: {d} Timestamp: {d} At {d},{d}  Attacks: {any} Kills {any} Sleeps {any} Comment: {s}\n",
+            "Location {d},{d}  Attacks: {any} Kills {any} Sleeps {any} Comment: {s}\n",
             .{
-                self.parent_id,
-                self.timestamp,
                 self.x,
                 self.y,
                 self.attacks,
@@ -132,20 +128,22 @@ pub const CatEvent = struct {
     }
 };
 
+const CatEvent = datastor.Event(usize, CatAction);
+
 // Some seed data to boot up the cat events timeseries data
 const cat_events = [_]CatEvent{
-    .{ .parent_id = 1, .timestamp = 1, .x = 10, .y = 10, .attacks = false, .kills = false, .sleep = true, .description = "starts at Location" },
-    .{ .parent_id = 2, .timestamp = 1, .x = 20, .y = 10, .attacks = false, .kills = false, .sleep = true, .description = "starts at Location" },
-    .{ .parent_id = 3, .timestamp = 1, .x = 10, .y = 20, .attacks = false, .kills = false, .sleep = true, .description = "starts at Location" },
-    .{ .parent_id = 4, .timestamp = 1, .x = 20, .y = 20, .attacks = false, .kills = false, .sleep = true, .description = "starts at Location" },
-    .{ .parent_id = 1, .timestamp = 10, .x = 10, .y = 10, .attacks = false, .kills = false, .sleep = false, .description = "awakes" },
-    .{ .parent_id = 1, .timestamp = 20, .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "attacks Burmese" },
-    .{ .parent_id = 2, .timestamp = 21, .x = 20, .y = 10, .attacks = false, .kills = false, .sleep = false, .description = "awakes" },
-    .{ .parent_id = 3, .timestamp = 21, .x = 10, .y = 20, .attacks = false, .kills = false, .sleep = false, .description = "awakes" },
-    .{ .parent_id = 2, .timestamp = 25, .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "retaliates against Siamese" },
-    .{ .parent_id = 3, .timestamp = 29, .x = 10, .y = 20, .attacks = false, .kills = false, .sleep = true, .description = "goes back to sleep" },
-    .{ .parent_id = 4, .timestamp = 30, .x = 20, .y = 20, .attacks = false, .kills = false, .sleep = false, .description = "awakes from all the commotion" },
-    .{ .parent_id = 4, .timestamp = 40, .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "attacks Burmese and Siamese" },
+    .{ .parent_id = 1, .timestamp = 1, .value = .{ .x = 10, .y = 10, .attacks = false, .kills = false, .sleep = true, .description = "starts at Location" } },
+    .{ .parent_id = 2, .timestamp = 1, .value = .{ .x = 20, .y = 10, .attacks = false, .kills = false, .sleep = true, .description = "starts at Location" } },
+    .{ .parent_id = 3, .timestamp = 1, .value = .{ .x = 10, .y = 20, .attacks = false, .kills = false, .sleep = true, .description = "starts at Location" } },
+    .{ .parent_id = 4, .timestamp = 1, .value = .{ .x = 20, .y = 20, .attacks = false, .kills = false, .sleep = true, .description = "starts at Location" } },
+    .{ .parent_id = 1, .timestamp = 10, .value = .{ .x = 10, .y = 10, .attacks = false, .kills = false, .sleep = false, .description = "awakes" } },
+    .{ .parent_id = 1, .timestamp = 20, .value = .{ .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "attacks Burmese" } },
+    .{ .parent_id = 2, .timestamp = 21, .value = .{ .x = 20, .y = 10, .attacks = false, .kills = false, .sleep = false, .description = "awakes" } },
+    .{ .parent_id = 3, .timestamp = 21, .value = .{ .x = 10, .y = 20, .attacks = false, .kills = false, .sleep = false, .description = "awakes" } },
+    .{ .parent_id = 2, .timestamp = 25, .value = .{ .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "retaliates against Siamese" } },
+    .{ .parent_id = 3, .timestamp = 29, .value = .{ .x = 10, .y = 20, .attacks = false, .kills = false, .sleep = true, .description = "goes back to sleep" } },
+    .{ .parent_id = 4, .timestamp = 30, .value = .{ .x = 20, .y = 20, .attacks = false, .kills = false, .sleep = false, .description = "awakes from all the commotion" } },
+    .{ .parent_id = 4, .timestamp = 40, .value = .{ .x = 20, .y = 10, .attacks = true, .kills = false, .sleep = false, .description = "attacks Burmese and Siamese" } },
 };
 
 pub fn createTimeseries() !void {
@@ -156,33 +154,36 @@ pub fn createTimeseries() !void {
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nCats example - Cats TableTimeseries boot initial data\n\n", .{});
 
-    var catDB = try datastor.TableWithTimeseries(Cat, CatEvent).init(gpa, "db/cats.db", "db/cats.events");
+    // load cats from the existing data from the last example
+    var catDB = try datastor.Table(usize, Cat).init(gpa, "db/cats.db");
     defer catDB.deinit();
-
-    // load both the base table, and all the events for all cats
     try catDB.load();
 
-    std.debug.print("\nExpecting that the timeseries data for all cats should be empty here, found = {d}\n", .{catDB.eventCount()});
+    // create a new Events stream for the cats
+    var catEvents = try datastor.Events(usize, CatAction).init(gpa, "db/cats.events");
+    defer catEvents.deinit();
+
+    std.debug.print("\nExpecting that the timeseries data for all cats should be empty here, found = {d}\n", .{catEvents.countAll()});
 
     // manually setup the timeseries events to setup the events table on disk
     for (cat_events) |event| {
-        try catDB.addEvent(event);
+        try catEvents.appendWithTimestamp(event.parent_id, event.timestamp, event.value);
     }
 
     // print out all the events in timestamp order
-    std.debug.print("After all events loaded, expect a list of events in timestamp order:\n", .{});
-    for (catDB.getAllEvents()) |event| {
-        std.debug.print("{s}", .{event});
+    std.debug.print("After all events created, expect a list of events in timestamp order:\n", .{});
+    for (catEvents.getAll()) |event| {
+        std.debug.print("ID: {d} Time: {d} Action: {s}", .{ event.parent_id, event.timestamp, event.value });
     }
 
     // now print out Cats in the datastor, along with an audit trail of events for each cat
     std.debug.print("\nAll cats with audit trail:\n", .{});
-    for (catDB.values()) |cat| {
+    for (catDB.items()) |cat| {
         std.debug.print("Cat {s}\n", .{cat});
-        const events = try catDB.getEventsFor(cat.id);
+        const events = try catEvents.for(cat.id);
         defer events.deinit();
         for (events.items) |event| {
-            std.debug.print("  - At {d}: {s} -> moves to ({d},{d}) status: (Asleep:{any}, Attacking:{any})\n", .{ event.timestamp, event.description, event.x, event.y, event.sleep, event.attacks });
+            std.debug.print("  - At {d}: {s} -> moves to ({d},{d}) status: (Asleep:{any}, Attacking:{any})\n", .{ event.timestamp, event.value.description, event.value.x, event.value.y, event.value.sleep, event.value.attacks });
         }
     }
 
@@ -190,18 +191,18 @@ pub fn createTimeseries() !void {
     for (0..4) |i| {
         const t: i64 = @as(i64, @intCast(i * 10 + 1));
         std.debug.print("\nState of all cats at Timestamp {d}\n", .{t});
-        for (catDB.values()) |cat| {
-            if (catDB.eventAt(cat.id, t)) |e| {
-                std.debug.print("  - {s} {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n", .{ cat.breed, e.description, e.timestamp, e.x, e.y, e.sleep, e.attacks });
+        for (catDB.items()) |cat| {
+            if (catDB.at(cat.id, t)) |e| {
+                std.debug.print("  - {s} {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n", .{ cat.breed, e.value.description, e.timestamp, e.value.x, e.value.y, e.value.sleep, e.value.attacks });
             } else unreachable;
         }
     }
 
     // get the latest status for each cat
     std.debug.print("\nCurrent state of all cats, based on latest event for each\n", .{});
-    for (catDB.values()) |cat| {
+    for (catDB.items()) |cat| {
         const e = catDB.latestEvent(cat.id).?;
-        std.debug.print("  - {s} is currently doing - {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n", .{ cat.breed, e.description, e.timestamp, e.x, e.y, e.sleep, e.attacks });
+        std.debug.print("  - {s} is currently doing - {s} since {d} at ({d},{d}) status: (Asleep: {any}, Attacking: {any})\n", .{ cat.breed, e.value.description, e.timestamp, e.value.x, e.value.y, e.value.sleep, e.value.attacks });
     }
 }
 
@@ -231,7 +232,7 @@ pub fn createTimeseriesNoIO() !void {
     }
 
     // now print out Cats in the datastor, along with an audit trail of events for each cat
-    for (catDB.values()) |cat| {
+    for (catDB.items()) |cat| {
         const events = try catDB.getEventsFor(cat.id);
         defer events.deinit();
         for (events.items) |event| {
@@ -241,13 +242,13 @@ pub fn createTimeseriesNoIO() !void {
 
     // iterate through 4 timestamps and show the state of all cats at the given timestamp
     for (0..4) |i| {
-        for (catDB.values()) |cat| {
+        for (catDB.items()) |cat| {
             if (catDB.eventAt(cat.id, @intCast(i * 10 + 1))) |_| {} else unreachable;
         }
     }
 
     // get the latest status for each cat
-    for (catDB.values()) |cat| {
+    for (catDB.items()) |cat| {
         const e = catDB.latestEvent(cat.id).?;
         _ = e;
     }
