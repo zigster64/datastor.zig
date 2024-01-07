@@ -15,7 +15,7 @@ pub fn createTable() !void {
     std.debug.print("\nSimple Things example - no allocation per thing\n\n", .{});
 
     // create a datastor to store the things
-    var db = try datastor.Table(usize, SimpleThing).init(gpa, "db/things.db");
+    var db = try datastor.Table(SimpleThing).init(gpa, "db/things.db");
     defer db.deinit();
 
     const things = [_]SimpleThing{
@@ -42,7 +42,7 @@ pub fn loadTable() !void {
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nThing example - load and reload simple data set from table\n\n", .{});
 
-    var db = try datastor.Table(usize, SimpleThing).init(gpa, "db/things.db");
+    var db = try datastor.Table(SimpleThing).init(gpa, "db/things.db");
     defer db.deinit();
 
     try db.load();

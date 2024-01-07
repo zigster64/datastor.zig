@@ -29,20 +29,74 @@ pub fn Item(comptime K: type, comptime T: type) type {
             _ = options;
             _ = layout;
 
-            try std.fmt.format(writer, "id: {any} value: {}", .{ item.id, item.value });
+            try std.fmt.format(writer, "id: {any} value: {}", item);
         }
     };
 }
 
-pub fn Table(comptime K: type, comptime T: type) type {
+// variant of an Item that is a node in a tree
+pub fn ItemNode(comptime K: type, comptime T: type) type {
     return struct {
         const Self = @This();
-        const ItemType = Item(K, T);
+        id: K = undefined,
+        parent_id: K = undefined,
+        value: T = undefined,
+
+        pub fn free(self: Self, allocator: Allocator) void {
+            if (std.meta.hasFn(T, "free")) {
+                self.value.free(allocator);
+            }
+        }
+
+        pub fn newID(self: *Self, count: usize) K {
+            if (std.meta.hasFn(T, "newID")) {
+                return self.value.newID(count);
+            }
+            return count;
+        }
+
+        pub fn newIDNode(self: *Self, parent_id: K, count: usize, parent_count: usize) K {
+            if (std.meta.hasFn(T, "newIDNode")) {
+                return self.value.newIDNode(parent_id, count, parent_count);
+            }
+            return self.newID(count);
+        }
+
+        pub fn format(item: Self, comptime layout: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+            _ = options;
+            _ = layout;
+
+            try std.fmt.format(writer, "id: {any}, parent: {any}, value: {}", item);
+        }
+    };
+}
+
+pub fn Table(comptime T: type) type {
+    return Datastore(usize, T, false);
+}
+
+pub fn Tree(comptime T: type) type {
+    return Datastore(usize, T, true);
+}
+
+pub fn CustomTable(comptime K: type, comptime T: type) type {
+    return Datastore(K, T, false);
+}
+
+pub fn CustomTree(comptime K: type, comptime T: type) type {
+    return Datastore(K, T, true);
+}
+
+pub fn Datastore(comptime K: type, comptime T: type, comptime is_tree: bool) type {
+    return struct {
+        const Self = @This();
+        const ItemType = if (is_tree) ItemNode(K, T) else Item(K, T);
         const ListType = std.AutoArrayHashMap(K, ItemType);
         const ArrayType = std.ArrayList(ItemType);
         allocator: Allocator,
         list: ListType,
         filename: []const u8,
+        is_tree: bool,
         dirty: bool = false,
 
         pub fn init(allocator: Allocator, filename: []const u8) !Self {
@@ -50,6 +104,7 @@ pub fn Table(comptime K: type, comptime T: type) type {
                 .allocator = allocator,
                 .list = ListType.init(allocator),
                 .filename = try allocator.dupe(u8, filename),
+                .is_tree = is_tree,
             };
         }
 
@@ -77,6 +132,26 @@ pub fn Table(comptime K: type, comptime T: type) type {
                 .value = value,
             };
             item.id = item.newID(self.list.count() + 1);
+            try self.list.put(item.id, item);
+            self.dirty = true;
+            return item.id;
+        }
+
+        // append a value to a parent node, autoincrementing the id field
+        pub fn appendNode(self: *Self, parent_id: K, value: T) !K {
+            if (!is_tree) @compileError("appendNode() only works on Tree type datastores. Try using datastor.Tree() instead of datastor.Table() ?");
+            var item = ItemType{
+                .parent_id = parent_id,
+                .value = value,
+            };
+            // enables the base class to have a custom override for the autoincr ID
+            // based on the seq number in the whole DB as well as the seq number relative
+            // to the parent
+            item.id = item.newIDNode(
+                parent_id,
+                self.list.count() + 1,
+                self.getChildrenCount(parent_id) + 1,
+            );
             try self.list.put(item.id, item);
             self.dirty = true;
             return item.id;
@@ -139,7 +214,7 @@ pub fn Table(comptime K: type, comptime T: type) type {
         }
 
         // Tree support  functions
-        pub fn getChildrenCount(self: Self, parent_id: K) !usize {
+        pub fn getChildrenCount(self: Self, parent_id: K) usize {
             var count: usize = 0;
             for (self.list.values()) |value| {
                 // TODO equality operator

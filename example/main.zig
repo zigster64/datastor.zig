@@ -38,6 +38,8 @@ pub fn main() !void {
     try animals.createTable();
     try animals.loadTable();
 
-    //     try forrest.createTable();
-    //     try forrest.loadTable();
+    std.debug.print("================================================\n", .{});
+    std.debug.print("FORREST tree of union type examples\n", .{});
+    try forrest.createTable();
+    try forrest.loadTable();
 }

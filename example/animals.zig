@@ -35,7 +35,7 @@ pub fn createTable() !void {
     std.debug.print("\nAnimals (union) example - save simple data set to table\n\n", .{});
 
     // create a datastor to store the animals
-    var animalDB = try datastor.Table(usize, Animal).init(gpa, "db/animals.db");
+    var animalDB = try datastor.Table(Animal).init(gpa, "db/animals.db");
     defer animalDB.deinit();
 
     // add a cat
@@ -68,7 +68,7 @@ pub fn loadTable() !void {
     std.debug.print("\nAnimals (union) example - load simple data set from disk\n\n", .{});
 
     // create a datastor to store the animals
-    var animalDB = try datastor.Table(usize, Animal).init(gpa, "db/animals.db");
+    var animalDB = try datastor.Table(Animal).init(gpa, "db/animals.db");
     defer animalDB.deinit();
 
     try animalDB.load();

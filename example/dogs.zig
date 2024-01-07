@@ -43,7 +43,7 @@ pub fn createTable() !void {
     std.debug.print("\nDogs example - save simple data set to table\n\n", .{});
 
     // create a datastor to store the dog
-    var dogDB = try datastor.Table(usize, Dog).init(gpa, "db/dogs.db");
+    var dogDB = try datastor.Table(Dog).init(gpa, "db/dogs.db");
     defer dogDB.deinit();
 
     // manually fill in datastor using our example dog seed data, autoincrementing the ID
@@ -134,7 +134,7 @@ pub fn createTimeseries() !void {
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nDogs example - Dogs TableTimeseries boot initial data\n\n", .{});
 
-    var dogDB = try datastor.Table(usize, Dog).init(gpa, "db/dogs.db");
+    var dogDB = try datastor.Table(Dog).init(gpa, "db/dogs.db");
     defer dogDB.deinit();
     try dogDB.load();
 

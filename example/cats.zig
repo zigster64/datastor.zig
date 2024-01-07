@@ -41,7 +41,7 @@ pub fn createTable() !void {
     std.debug.print("\nCats example - save simple data set to table\n\n", .{});
 
     // create a datastor to store the cats
-    var catDB = try datastor.Table(usize, Cat).init(gpa, "db/cats.db");
+    var catDB = try datastor.Table(Cat).init(gpa, "db/cats.db");
     defer catDB.deinit();
 
     // manually fill in datastor using our example cats seed data, autoincrementing the ID
@@ -73,7 +73,7 @@ pub fn loadTable() !void {
     std.debug.print("\nCats example - load simple data set from table\n\n", .{});
 
     // create a datastor to store the cats
-    var catDB = try datastor.Table(usize, Cat).init(gpa, "db/cats.db");
+    var catDB = try datastor.Table(Cat).init(gpa, "db/cats.db");
     defer catDB.deinit();
 
     try catDB.load();
@@ -155,7 +155,7 @@ pub fn createTimeseries() !void {
     std.debug.print("\nCats example - Cats TableTimeseries boot initial data\n\n", .{});
 
     // load cats from the existing data from the last example
-    var catDB = try datastor.Table(usize, Cat).init(gpa, "db/cats.db");
+    var catDB = try datastor.Table(Cat).init(gpa, "db/cats.db");
     defer catDB.deinit();
     try catDB.load();
 

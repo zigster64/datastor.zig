@@ -4,6 +4,8 @@ const datastor = @import("datastor");
 // Example case where the Key that we use to ID each item is some custom function that returns a custom type
 
 const KeyType = [16]u8;
+const TableType = datastor.CustomTable(KeyType, CustomIDThing);
+
 pub const CustomIDThing = struct {
     x: usize = 0,
     y: usize = 0,
@@ -27,7 +29,7 @@ pub fn createTable() !void {
     std.debug.print("\nCustom ID example - no allocation per thing\n\n", .{});
 
     // create a datastor to store the things
-    var db = try datastor.Table(KeyType, CustomIDThing).init(gpa, "db/custom.db");
+    var db = try TableType.init(gpa, "db/custom.db");
     defer db.deinit();
 
     const things = [_]CustomIDThing{
@@ -54,7 +56,7 @@ pub fn loadTable() !void {
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nCustom ID example - load and reload simple data set from table\n\n", .{});
 
-    var db = try datastor.Table(KeyType, CustomIDThing).init(gpa, "db/custom.db");
+    var db = try TableType.init(gpa, "db/custom.db");
     defer db.deinit();
 
     try db.load();
