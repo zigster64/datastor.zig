@@ -18,20 +18,6 @@ const Animal = union(AnimalType) {
     cat: cats.Cat,
     dog: dogs.Dog,
 
-    // Union types MUST have ID getters and setters for now - annoying, but Im not sure yet how to get around this
-    pub fn setID(self: *Self, id: usize) void {
-        switch (self.*) {
-            .cat => |*cat| cat.id = id,
-            .dog => |*dog| dog.id = id,
-        }
-    }
-    pub fn getID(self: Self) usize {
-        switch (self) {
-            .cat => |cat| return cat.id,
-            .dog => |dog| return dog.id,
-        }
-    }
-
     pub fn free(self: Self, allocator: Allocator) void {
         switch (self) {
             .cat => |cat| cat.free(allocator),
@@ -49,7 +35,7 @@ pub fn createTable() !void {
     std.debug.print("\nAnimals (union) example - save simple data set to table\n\n", .{});
 
     // create a datastor to store the animals
-    var animalDB = try datastor.Table(Animal).init(gpa, "db/animals.db");
+    var animalDB = try datastor.Table(usize, Animal).init(gpa, "db/animals.db");
     defer animalDB.deinit();
 
     // add a cat
@@ -82,11 +68,11 @@ pub fn loadTable() !void {
     std.debug.print("\nAnimals (union) example - load simple data set from disk\n\n", .{});
 
     // create a datastor to store the animals
-    var animalDB = try datastor.Table(Animal).init(gpa, "db/animals.db");
+    var animalDB = try datastor.Table(usize, Animal).init(gpa, "db/animals.db");
     defer animalDB.deinit();
 
     try animalDB.load();
-    for (animalDB.values(), 0..) |animal, i| {
+    for (animalDB.items(), 0..) |animal, i| {
         std.debug.print("Animal {d} is {any}:\n", .{ i, animal });
     }
 }

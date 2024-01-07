@@ -33,8 +33,10 @@ pub fn main() !void {
     try dogs.createTable();
     try dogs.createTimeseries();
 
-    //     try animals.createTable();
-    //     try animals.loadTable();
+    std.debug.print("================================================\n", .{});
+    std.debug.print("ANIMALS union type examples\n", .{});
+    try animals.createTable();
+    try animals.loadTable();
 
     //     try forrest.createTable();
     //     try forrest.loadTable();
