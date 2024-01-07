@@ -71,4 +71,13 @@ pub fn loadTable() !void {
     for (db.items(), 0..) |thing, i| {
         std.debug.print("Thing {d} has id {s} and value ({d},{d})\n", .{ i, thing.id, thing.value.x, thing.value.y });
     }
+
+    // try lookup using the custom key
+    // TODO - key equality, expect this to fail
+    const c1 = db.get([_]u8{ 'A', 'B', 'C', '-', '1', '-', '1', ':', '2', 0, 0, 0, 0, 0, 0, 0 }).?;
+    const c2 = db.get([_]u8{ 'A', 'B', 'C', '-', '2', '-', '3', ':', '4', 0, 0, 0, 0, 0, 0, 0 }).?;
+    const c3 = db.get([_]u8{ 'A', 'B', 'C', '-', '3', '-', '5', ':', '6', 0, 0, 0, 0, 0, 0, 0 }).?;
+    std.debug.print("Got back {s} {} from key ABC-1-1:2\n", .{ c1.id, c1.value });
+    std.debug.print("Got back {s} {} from custom key ABC-2-3:4\n", .{ c2.id, c2.value });
+    std.debug.print("Got back {s} {} from custom key ABC-3-5:6\n", .{ c3.id, c3.value });
 }
