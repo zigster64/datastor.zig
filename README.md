@@ -6,18 +6,24 @@ Intended use is for:
 
 - Object persistence using local storage, for edge / IoT / local game world, etc
 - Thread safe for use in a single process only
-- Persist both Static and Timeseries data
+- Persist Table, Timeseries and Tree structured data
 - Situations where using an external DB would be overkill
+- Where performance is more important than general flexibility
 
 Not intended for :
 
+- Any situation where the entire dataset will not fit in memory
 - Scalable, multi-process database backends.
 - General Purpose data persistence. Datastor has a highly opinionated approach to dealing with Static vs Timeseries data. That may not suit the way your data is structured.
 - Current data format uses native `usize` quite a bit, so the datafiles are not 100% portable between machines with different word sizes.
-- Static datasets that grow, shrink, or change often.
-- Handling very large volumes of timeseries data.
 
-For any of the "Not Intended" use cases above, best look at options such as server based PostgreSQL w/ TimeseriesDB extensions over the network.
+For any of the "Not Intended" use cases above, best look at options such as SQLite, DuckDB, or server based PostgreSQL w/ TimeseriesDB extensions over the network.
+
+References:
+
+- [Postgres Libraries for Zig](http://github.com/karlseguin/pg.zig)
+- [DuckDB Libraries for Zig](http://github.com/karlseguin/zuckdb.zig)
+- [SQLite for Zig](https://github.com/search?q=zig%20sqlite&type=repositories)
 
 On disk format uses S2S format for object storage
 (see https://github.com/ziglibs/s2s)
@@ -28,28 +34,115 @@ easy enough, but its something you should be aware of.
 ## Version Log
 
 - Dec 2023 - v0.0.0 - init project
-- Jan 2024 - v0.1.0 - TBD
+- Jan 2024 - v0.2.0 - new key types (serial / uuid / string)
 
 ----
 
-## Project Scope - What it does
+## Project Scope - how it works
 
-Datastor.zig provides an embedded "Object Persistence" API for collections of Zig Types.
-
-No external DB dependencies, and no DLLs needed.
+`datastor.zig` provides an embedded "Object Persistence" API for collections of Zig Types.
 
 In concept, A Datastor is a light comptime wrapper around your struct, that provides :
 
-- An ordered HashMap collection of elements
-- Be able to insert records, either autoincrement the id, or call a custom function to generate a new key based on the record
-- Functions to load / save that collection to and from disk
-- An unlimited ArrayList of Timeseries events associated with each element in the collection
+- An ordered HashMap collection of elements, synched to disk
+- CRUD operations against that collection
+- A single 'primary key' stored as extra metadata against the user-supplied struct
+- Primary Keys can be one of : (Serial Number, UUID, Custom String)
+- Timeseries extension, to provide each record in a Table with an unlimited audit trail of state transitions
 - Timeseries handy functions to get element state at a point in time / events over a period, etc
-- Automatic synch to disk as your collection data changes
-- Handles memory management nicely, so you can load / save / re-load data as much as you like, and let the library manage the allocations and frees
 - Handles tagged union data, so each table may store multiple variants of a type, but still using a strict schema across types
 - Handles Tree structured data, so you can optionally overlay a heirachy on top of your collection
 - Utility functions for tree data to reparent nodes, or move nodes up and down within their parent block
+
+---
+
+# Types of Datastore
+
+## [Table Data](#table-data)
+
+For 2D Tables, where each row is an instance of your data struct, with additional metadata to record the key, etc.
+
+Example: A Table of Customer information.
+
+## [Tree Data](#tree-data)
+
+For Tree structured data, where each row is an instance of your data struct, with additional metadata that references the parent row.
+
+Example: A Tree of Projects within a Heirachy of Projects
+
+## [Timeseries Data](#timeseries-data)
+
+For streaming / event / state transition data, where each row is an instance of your event data, with additional metadata to 
+reference the parent record, and a timestamp for when the record was created.
+
+Example: Lets say we have a game, with a Table of 'Monster'.  We can add a Timeseries datastore, which tracks the (x,y) location and current HitPoints
+of any Monster at each turn in the game. This keeps the original Monster table un-modified, and tracks an audit trail of state transitions for 
+all monsters in a separate timeseries array.
+
+---
+
+# Operations on a Datastore
+
+| Function | Description | Notes |
+|---|---|---|
+| Load() | Loads the Datastore from disk | |
+| Save() | Saves the Datastore to disk | |
+| Items() []Record | Returns an ordered ArrayList of all items in the datastore | Caller owns the ArrayList, must free() after use |
+| Append(Value) Key | Add an item to the datastore. Will compute a new primary key for the record | Returns the value of the newly computed primary key for the new record |
+| Put(Key, Value) | Updates the Value of the record with the given Key ||
+| Get(Key) Record | Returns the record with the given Key ||
+| Delete(Key) | Deletes the record with the given Key | "Deleted" Records are kept on disk, but marked as invalid |
+| Vacuum() | Vacuum will strip out all deleted records from the datastore, and re-number the SERIAL primary keys, plus any referenced records in Timeseries datastores ||
+| Select(filterFn) []Record | Returns an ordered ArrayList of all the items that match the given filter. The filter is a function that takes the record value, and returns true if it matches | Caller owns the ArrayList, and must free() after use |
+| Migrate(OldStruct, NewStruct) | Converts existing datastores from the old record structure to a new record structure ||
+|---|---|
+
+
+
+---
+
+# Types of Keys
+
+## SERIAL
+
+Tables with a SERIAL primary key. 
+
+When a new record is added to a Table, it automatically gets assigned to (NUMBER OF RECORDS + 1)
+
+## UUID
+
+UUID primary keys generate a new random UUIDv4 value when new records are created
+
+## String
+
+A String key is a custom user-generated key for new records
+
+The owning structure must define a function to generate a new key based on the record contents, and the record number
+
+For Table datastores :
+`pub fn newKey(self, allocator, record_number) []const u8`
+
+For Tree datastores, optionally include this function :
+`pub fn newNodeKey(self, allocator, parent_key, record_number) []const u8`
+... or fallback to `newKey()` if not provided
+
+---
+
+
+# Table Data
+
+---
+
+# Tree Data
+
+--- 
+
+## Timeseries Data
+
+---
+
+
+
 
 ## Intial State information vs State Transitions
 
