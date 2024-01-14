@@ -2,7 +2,12 @@
 
 Fast & Light Data persistence layer for Zig
 
-Intended use is for:
+## Version Log
+
+- Dec 2023 - v0.0.0 - init project
+- Jan 2024 - v0.2.0 - new key types (serial / uuid / string)
+
+## Intended use is for:
 
 - Object persistence using local storage, for edge / IoT / local game world, etc
 - Thread safe for use in a single process only
@@ -10,31 +15,31 @@ Intended use is for:
 - Situations where using an external DB would be overkill
 - Where performance is more important than general flexibility
 
-Not intended for :
-
-- Any situation where the entire dataset will not fit in memory
-- Scalable, multi-process database backends.
-- General Purpose data persistence. Datastor has a highly opinionated approach to dealing with Static vs Timeseries data. That may not suit the way your data is structured.
-- Current data format uses native `usize` quite a bit, so the datafiles are not 100% portable between machines with different word sizes.
-
-For any of the "Not Intended" use cases above, best look at options such as SQLite, DuckDB, or server based PostgreSQL w/ TimeseriesDB extensions over the network.
-
-References:
-
-- [Postgres Libraries for Zig](http://github.com/karlseguin/pg.zig)
-- [DuckDB Libraries for Zig](http://github.com/karlseguin/zuckdb.zig)
-- [SQLite for Zig](https://github.com/search?q=zig%20sqlite&type=repositories)
-
 On disk format uses S2S format for object storage
 (see https://github.com/ziglibs/s2s)
 
 S2S is battle tested code, but it does lack a few types that it can serialize out of the box. You can code around this
 easy enough, but its something you should be aware of.
 
-## Version Log
+--- 
 
-- Dec 2023 - v0.0.0 - init project
-- Jan 2024 - v0.2.0 - new key types (serial / uuid / string)
+## Not intended for :
+
+- Any situation where the entire dataset will not fit in memory
+- Scalable, multi-process database backends.
+- General Purpose data persistence. Datastor has a highly opinionated approach to dealing with Static vs Timeseries data. That may not suit the way your data is structured.
+- Current data format uses native `usize` quite a bit, so the datafiles are not 100% portable between machines with different word sizes.
+
+For any of the "Not Intended" use cases above, best look at options such as SQLite, DuckDB for embedded DBs
+or server based PostgreSQL w/ TimeseriesDB extensions over the network.
+
+References:
+
+- [Postgres Libraries for Zig](http://github.com/karlseguin/pg.zig)
+- [DuckDB Libraries for Zig](http://github.com/karlseguin/zuckdb.zig)
+- [SQLite for Zig](https://github.com/search?q=zig%20sqlite&type=repositories)
+- [MySQL for Zig](https://github.com/search?q=zig%20mysql&type=repositories)
+- [Redis for Zig](https://github.com/search?q=zig%20redis&type=repositories)
 
 ----
 
