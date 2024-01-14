@@ -59,6 +59,10 @@ In concept, A Datastor is a light comptime wrapper around your struct, that prov
 - Handles Tree structured data, so you can optionally overlay a heirachy on top of your collection
 - Utility functions for tree data to reparent nodes, or move nodes up and down within their parent block
 
+The example directory contains a large number of example scenarios, datastores, and reports.
+
+The wiki contains a structured walk through tutorial for how to use the different datastore types.
+
 ---
 
 # Types of Datastore
