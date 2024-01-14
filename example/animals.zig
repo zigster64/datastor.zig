@@ -27,9 +27,11 @@ const Animal = union(AnimalType) {
 };
 
 pub fn createTable() !void {
-    std.os.unlink("db/animals.db") catch {};
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
 
-    const gpa = std.heap.page_allocator;
+    std.os.unlink("db/animals.db") catch {};
 
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nAnimals (union) example - save simple data set to table\n\n", .{});
@@ -62,7 +64,9 @@ pub fn createTable() !void {
 }
 
 pub fn loadTable() !void {
-    const gpa = std.heap.page_allocator;
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
 
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nAnimals (union) example - load simple data set from disk\n\n", .{});

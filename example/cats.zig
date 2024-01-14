@@ -33,10 +33,13 @@ const cats = [_]Cat{
 
 // An example of a datastor on a simple 2D table
 pub fn createTable() !void {
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
+
     // remove the original data file
     std.os.unlink("db/cats.db") catch {};
 
-    const gpa = std.heap.page_allocator;
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nCats example - save simple data set to table\n\n", .{});
 
@@ -68,7 +71,10 @@ pub fn createTable() !void {
 
 // An example of loading a datastor from disk
 pub fn loadTable() !void {
-    const gpa = std.heap.page_allocator;
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
+
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nCats example - load simple data set from table\n\n", .{});
 
@@ -147,10 +153,13 @@ const cat_events = [_]CatEvent{
 };
 
 pub fn createTimeseries() !void {
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
+
     // start with no timeseries data on file
     std.os.unlink("db/cats.events") catch {};
 
-    const gpa = std.heap.page_allocator;
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nCats example - Cats TableTimeseries boot initial data\n\n", .{});
 

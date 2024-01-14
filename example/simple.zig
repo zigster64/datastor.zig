@@ -7,10 +7,13 @@ pub const SimpleThing = struct {
 };
 
 pub fn createTable() !void {
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
+
     // remove the original data file
     std.os.unlink("db/things.db") catch {};
 
-    const gpa = std.heap.page_allocator;
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nSimple Things example - no allocation per thing\n\n", .{});
 
@@ -38,7 +41,10 @@ pub fn createTable() !void {
 }
 
 pub fn loadTable() !void {
-    const gpa = std.heap.page_allocator;
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
+
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nThing example - load and reload simple data set from table\n\n", .{});
 
