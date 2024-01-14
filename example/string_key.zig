@@ -51,7 +51,7 @@ pub fn createTable() !void {
 pub fn loadTable() !void {
     const gpa = std.heap.page_allocator;
     std.debug.print("------------------------------------------------\n", .{});
-    std.debug.print("\nString Key example - load and reload simple data set from table\n\n", .{});
+    std.debug.print("\nString Key example - load and reload simple data set from table using a String key\n\n", .{});
 
     var db = try TableType.init(gpa, "db/stringkey.db");
     defer db.deinit();
@@ -70,7 +70,6 @@ pub fn loadTable() !void {
     }
 
     // try lookup using the custom key
-    // TODO - key equality, expect this to fail
     const c1 = db.get("ABC-1-1:2").?;
     const c2 = db.get("ABC-2-3:4").?;
     const c3 = db.get("ABC-3-5:6").?;

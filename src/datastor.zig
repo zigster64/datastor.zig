@@ -192,7 +192,7 @@ pub fn Datastore(comptime KT: KeyType, comptime K: type, comptime T: type, compt
         }
 
         // put a value into a tree, using the supplied key, parent ID, and value
-        pub fn putTree(self: *Self, id: K, parent_id: K, value: T) !void {
+        pub fn putNode(self: *Self, parent_id: K, id: K, value: T) !void {
             try self.list.put(id, ItemType{
                 .id = id,
                 .parent_id = parent_id,

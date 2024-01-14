@@ -132,9 +132,56 @@ For Tree datastores, optionally include this function :
 
 # Table Data
 
+A Table is a collection of records, where each record is mapped to a Zig struct, and has a unique KEY that identifies that record.
+
+Records are stored on disk in insert order, and retrieving all the records from the store are also in the original insert order.
+
+Create a Table type:
+
+|Function| Description | Notes |
+|--------|-------------|-------|
+| Table(ItemType) type | Returns a new type, representing a Table datastore, with a SERIAL key ||
+| TableWithKey(ItemType, KeyType) type | Returns a new type, representing a Table datastore, with the specified KEY type | KEY can be one of .serial, .uuid, .string |
+
+Init / Deinit a Table:
+
+|Function| Description | Notes |
+|--------|-------------|-------|
+| init(allocator, filename) !Table | Returns a new instance of a Table, with the associated file ||
+| deinit() | Frees up memory allocated by the table. This includes memory allocated for each record | If the base struct for the store includes a `free(allocator)`, this will be called on each record |
+
+Table specific operations
+
+|Function| Description | Notes |
+|--------|-------------|-------|
+| putNode(parent_key, key, value) !void ||
+
 ---
 
 # Tree Data
+
+Create a Tree type
+
+|Function| Description | Notes |
+|--------|-------------|-------|
+| Tree(ItemType) type | Returns a new type, representing a Tree datastore, with a SERIAL key ||
+| TreeWithKey(ItemType, KeyType) type | Returns a new type, representing a Tree datastore, with the specified KEY type | KEY can be one of .serial, .uuid, .string |
+
+
+Init / Deinit a Tree:
+
+|Function| Description | Notes |
+|--------|-------------|-------|
+| init(allocator, filename) !Table | Returns a new instance of a Table, with the associated file ||
+| deinit() | Frees up memory allocated by the table. This includes memory allocated for each record | If the base struct for the store includes a `free(allocator)`, this will be called on each record |
+
+Table specific functions. All the functions that are available to a Table also apply to a Tree.
+
+Tree specific operations
+
+|Function| Description | Notes |
+|--------|-------------|-------|
+| putNode(parent_key, key, value) !void ||
 
 --- 
 
