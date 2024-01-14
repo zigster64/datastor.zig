@@ -124,7 +124,7 @@ For Table datastores :
 For Tree datastores, optionally include this function :
 
 `pub fn newNodeID(self, allocator, parent_key, record_number, sibling_count) []const u8`
-... or fallback to `newID()` if not provided
+... or fallback to `newID()` if newNodeID() is not provided
 
 
 ---
@@ -154,7 +154,7 @@ Table specific operations
 
 |Function| Description | Notes |
 |--------|-------------|-------|
-| putNode(parent_key, key, value) !void ||
+| append(ItemType) !KeyType | Appends a new record to the store. Returns the value of the generated key | The new records are NOT saved to disk, until save() is called on the store, to allow updates to be batched. |
 
 ---
 
@@ -188,6 +188,10 @@ Tree specific operations
 ## Timeseries Data
 
 ---
+
+---
+
+# Everything from here down needs to be rewritten / deleted
 
 
 
