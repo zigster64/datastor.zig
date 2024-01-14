@@ -4,7 +4,7 @@ const dogs = @import("dogs.zig");
 const animals = @import("animals.zig");
 const forrest = @import("forrest.zig");
 const simple = @import("simple.zig");
-const custom = @import("custom_id.zig");
+const stringkey = @import("string_key.zig");
 
 pub fn main() !void {
     std.debug.print("Datastor examples\n", .{});
@@ -15,9 +15,9 @@ pub fn main() !void {
     try simple.loadTable();
 
     std.debug.print("================================================\n", .{});
-    std.debug.print("SIMPLE table with CUSTOM key examples\n", .{});
-    try custom.createTable();
-    try custom.loadTable();
+    std.debug.print("SIMPLE table with STRING key examples\n", .{});
+    try stringkey.createTable();
+    try stringkey.loadTable();
 
     std.debug.print("================================================\n", .{});
     std.debug.print("CATS table examples\n", .{});

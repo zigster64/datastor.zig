@@ -85,17 +85,16 @@ all monsters in a separate timeseries array.
 
 | Function | Description | Notes |
 |---|---|---|
-| Load() | Loads the Datastore from disk | |
-| Save() | Saves the Datastore to disk | |
-| Items() []Record | Returns an ordered ArrayList of all items in the datastore | Caller owns the ArrayList, must free() after use |
-| Append(Value) Key | Add an item to the datastore. Will compute a new primary key for the record | Returns the value of the newly computed primary key for the new record |
-| Put(Key, Value) | Updates the Value of the record with the given Key ||
-| Get(Key) Record | Returns the record with the given Key ||
-| Delete(Key) | Deletes the record with the given Key | "Deleted" Records are kept on disk, but marked as invalid |
-| Vacuum() | Vacuum will strip out all deleted records from the datastore, and re-number the SERIAL primary keys, plus any referenced records in Timeseries datastores ||
-| Select(filterFn) []Record | Returns an ordered ArrayList of all the items that match the given filter. The filter is a function that takes the record value, and returns true if it matches | Caller owns the ArrayList, and must free() after use |
-| Migrate(OldStruct, NewStruct) | Converts existing datastores from the old record structure to a new record structure ||
-|---|---|
+| load() | Loads the Datastore from disk | |
+| save() | Saves the Datastore to disk | |
+| items() []Record | Returns an ordered ArrayList of all items in the datastore | Caller owns the ArrayList, must free() after use |
+| append(Value) Key | Add an item to the datastore. Will compute a new primary key for the record | Returns the value of the newly computed primary key for the new record |
+| put(Key, Value) | Updates the Value of the record with the given Key ||
+| get(Key) Record | Returns the record with the given Key ||
+| delete(Key) | Deletes the record with the given Key | "Deleted" Records are kept on disk, but marked as invalid |
+| vacuum() | Vacuum will strip out all deleted records from the datastore, and re-number the SERIAL primary keys, plus any referenced records in Timeseries datastores ||
+| select(filterFn) []Record | Returns an ordered ArrayList of all the items that match the given filter. The filter is a function that takes the record value, and returns true if it matches | Caller owns the ArrayList, and must free() after use |
+| migrate(OldStruct, NewStruct) | Converts existing datastores from the old record structure to a new record structure ||
 
 
 
@@ -120,11 +119,13 @@ A String key is a custom user-generated key for new records
 The owning structure must define a function to generate a new key based on the record contents, and the record number
 
 For Table datastores :
-`pub fn newKey(self, allocator, record_number) []const u8`
+`pub fn newID(self, allocator, record_number) []const u8`
 
 For Tree datastores, optionally include this function :
-`pub fn newNodeKey(self, allocator, parent_key, record_number) []const u8`
-... or fallback to `newKey()` if not provided
+
+`pub fn newNodeID(self, allocator, parent_key, record_number, sibling_count) []const u8`
+... or fallback to `newID()` if not provided
+
 
 ---
 

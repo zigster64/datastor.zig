@@ -3,6 +3,15 @@ const s2s = @import("s2s.zig");
 const Allocator = std.mem.Allocator;
 
 //========================================================================================================
+// KEY types
+const KeyType = enum {
+    serial,
+    uuid,
+    string,
+    custom,
+};
+
+//========================================================================================================
 // TABLE section
 //
 // An Item is a wrapper struct around a type that is used as a record in a table
@@ -18,9 +27,9 @@ pub fn Item(comptime K: type, comptime T: type) type {
             }
         }
 
-        pub fn newID(self: *Self, count: usize) K {
+        pub fn newID(self: *Self, allocator: Allocator, count: usize) !K {
             if (std.meta.hasFn(T, "newID")) {
-                return self.value.newID(count);
+                return self.value.newID(allocator, count);
             }
             return count;
         }
@@ -48,18 +57,18 @@ pub fn ItemNode(comptime K: type, comptime T: type) type {
             }
         }
 
-        pub fn newID(self: *Self, count: usize) K {
+        pub fn newID(self: *Self, allocator: Allocator, count: usize) !K {
             if (std.meta.hasFn(T, "newID")) {
-                return self.value.newID(count);
+                return self.value.newID(allocator, count);
             }
             return count;
         }
 
-        pub fn newIDNode(self: *Self, parent_id: K, count: usize, parent_count: usize) K {
-            if (std.meta.hasFn(T, "newIDNode")) {
-                return self.value.newIDNode(parent_id, count, parent_count);
+        pub fn newNodeID(self: *Self, allocator: Allocator, parent_id: K, count: usize, parent_count: usize) !K {
+            if (std.meta.hasFn(T, "newNodeID")) {
+                return self.value.newNodeID(allocator, parent_id, count, parent_count);
             }
-            return self.newID(count);
+            return self.newID(allocator, count);
         }
 
         pub fn format(item: Self, comptime layout: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
@@ -72,31 +81,42 @@ pub fn ItemNode(comptime K: type, comptime T: type) type {
 }
 
 pub fn Table(comptime T: type) type {
-    return Datastore(usize, T, false);
+    return Datastore(.serial, usize, T, false);
+}
+
+pub fn TableWithKey(comptime T: type, comptime KT: KeyType) type {
+    switch (KT) {
+        .serial => return Datastore(.serial, usize, T, false),
+        .uuid => return Datastore(.uuid, u128, T, false),
+        .string => return Datastore(.string, []const u8, T, false),
+        .custom => @compileError("Custom key type not yet supported"),
+    }
 }
 
 pub fn Tree(comptime T: type) type {
-    return Datastore(usize, T, true);
+    return Datastore(.serial, usize, T, true);
 }
 
-pub fn CustomTable(comptime K: type, comptime T: type) type {
-    return Datastore(K, T, false);
+pub fn TreeWithKey(comptime T: type, comptime KT: KeyType) type {
+    switch (KT) {
+        .serial => return Datastore(.serial, usize, T, true),
+        .uuid => return Datastore(.uuid, u128, T, true),
+        .string => return Datastore(.string, []const u8, T, true),
+        .custom => @compileError("Custom key type not yet supported"),
+    }
 }
 
-pub fn CustomTree(comptime K: type, comptime T: type) type {
-    return Datastore(K, T, true);
-}
-
-pub fn Datastore(comptime K: type, comptime T: type, comptime is_tree: bool) type {
+pub fn Datastore(comptime KT: KeyType, comptime K: type, comptime T: type, comptime is_tree: bool) type {
     return struct {
         const Self = @This();
         const ItemType = if (is_tree) ItemNode(K, T) else Item(K, T);
-        const ListType = std.AutoArrayHashMap(K, ItemType);
+        const ListType = if (KT == .string) std.StringArrayHashMap(ItemType) else std.AutoArrayHashMap(K, ItemType);
         const ArrayType = std.ArrayList(ItemType);
         allocator: Allocator,
         list: ListType,
         filename: []const u8,
         is_tree: bool,
+        key_type: KeyType = KT,
         dirty: bool = false,
 
         pub fn init(allocator: Allocator, filename: []const u8) !Self {
@@ -110,8 +130,12 @@ pub fn Datastore(comptime K: type, comptime T: type, comptime is_tree: bool) typ
 
         fn freeItems(self: *Self) void {
             if (std.meta.hasFn(T, "free")) {
-                for (self.list.values()) |value| {
-                    value.free(self.allocator);
+                for (self.list.values()) |item| {
+                    item.free(self.allocator);
+                    switch (KT) {
+                        .string => self.allocator.free(&item.id),
+                        else => {},
+                    }
                 }
             }
         }
@@ -131,7 +155,7 @@ pub fn Datastore(comptime K: type, comptime T: type, comptime is_tree: bool) typ
             var item = ItemType{
                 .value = value,
             };
-            item.id = item.newID(self.list.count() + 1);
+            item.id = try item.newID(self.allocator, self.list.count() + 1);
             try self.list.put(item.id, item);
             self.dirty = true;
             return item.id;
@@ -147,7 +171,8 @@ pub fn Datastore(comptime K: type, comptime T: type, comptime is_tree: bool) typ
             // enables the base class to have a custom override for the autoincr ID
             // based on the seq number in the whole DB as well as the seq number relative
             // to the parent
-            item.id = item.newIDNode(
+            item.id = try item.newNodeID(
+                self.allocator,
                 parent_id,
                 self.list.count() + 1,
                 self.getChildrenCount(parent_id) + 1,
