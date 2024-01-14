@@ -37,9 +37,9 @@ References:
 
 - [Postgres Libraries for Zig](http://github.com/karlseguin/pg.zig)
 - [DuckDB Libraries for Zig](http://github.com/karlseguin/zuckdb.zig)
-- [SQLite for Zig](https://github.com/search?q=zig%20sqlite&type=repositories)
-- [MySQL for Zig](https://github.com/search?q=zig%20mysql&type=repositories)
-- [Redis for Zig](https://github.com/search?q=zig%20redis&type=repositories)
+- [SQLite for Zig](https://github.com/search?q=language:zig%20sqlite&type=repositories)
+- [MySQL for Zig](https://github.com/search?q=language:zig%20mysql&type=repositories)
+- [Redis for Zig](https://github.com/search?q=language:zig%20redis&type=repositories)
 
 ----
 
