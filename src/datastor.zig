@@ -21,7 +21,10 @@ pub fn Item(comptime K: type, comptime T: type) type {
         id: K = undefined,
         value: T = undefined,
 
-        pub fn free(self: Self, allocator: Allocator) void {
+        pub fn free(self: Self, allocator: Allocator, comptime KT: KeyType) void {
+            if (KT == .string) {
+                allocator.free(self.id);
+            }
             if (std.meta.hasFn(T, "free")) {
                 self.value.free(allocator);
             }
@@ -51,7 +54,10 @@ pub fn ItemNode(comptime K: type, comptime T: type) type {
         parent_id: K = undefined,
         value: T = undefined,
 
-        pub fn free(self: Self, allocator: Allocator) void {
+        pub fn free(self: Self, allocator: Allocator, comptime KT: KeyType) void {
+            if (KT == .string) {
+                allocator.free(self.id);
+            }
             if (std.meta.hasFn(T, "free")) {
                 self.value.free(allocator);
             }
@@ -116,7 +122,6 @@ pub fn Datastore(comptime KT: KeyType, comptime K: type, comptime T: type, compt
         list: ListType,
         filename: []const u8,
         is_tree: bool,
-        key_type: KeyType = KT,
         dirty: bool = false,
 
         pub fn init(allocator: Allocator, filename: []const u8) !Self {
@@ -129,14 +134,8 @@ pub fn Datastore(comptime KT: KeyType, comptime K: type, comptime T: type, compt
         }
 
         fn freeItems(self: *Self) void {
-            if (std.meta.hasFn(T, "free")) {
-                for (self.list.values()) |item| {
-                    item.free(self.allocator);
-                    switch (KT) {
-                        .string => self.allocator.free(&item.id),
-                        else => {},
-                    }
-                }
+            for (self.list.values()) |item| {
+                item.free(self.allocator, KT);
             }
         }
 

@@ -62,9 +62,11 @@ const Forrest = union(ForrestInhabitantType) {
 };
 
 pub fn createTable() !void {
-    std.os.unlink("db/forrest.db") catch {};
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
 
-    const gpa = std.heap.page_allocator;
+    std.os.unlink("db/forrest.db") catch {};
 
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nForrest (Tree of Union type) create data example\n\n", .{});
@@ -125,7 +127,9 @@ pub fn createTable() !void {
 }
 
 pub fn loadTable() !void {
-    const gpa = std.heap.page_allocator;
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
 
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nForrest (Tree of Union type) load example\n\n", .{});

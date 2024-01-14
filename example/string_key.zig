@@ -18,10 +18,13 @@ pub const StringKeyThing = struct {
 };
 
 pub fn createTable() !void {
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
+
     // remove the original data file
     std.os.unlink("db/stringkey.db") catch {};
 
-    const gpa = std.heap.page_allocator;
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nString ID example\n\n", .{});
 
@@ -49,7 +52,10 @@ pub fn createTable() !void {
 }
 
 pub fn loadTable() !void {
-    const gpa = std.heap.page_allocator;
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
+
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nString Key example - load and reload simple data set from table using a String key\n\n", .{});
 

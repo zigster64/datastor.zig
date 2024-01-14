@@ -35,10 +35,13 @@ const dogs = [_]Dog{
 
 // An example of a datastor on a simple 2D table
 pub fn createTable() !void {
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
+
     // remove the original data file
     std.os.unlink("db/dogs.db") catch {};
 
-    const gpa = std.heap.page_allocator;
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nDogs example - save simple data set to table\n\n", .{});
 
@@ -127,10 +130,13 @@ const dog_events = [_]Event{
 };
 
 pub fn createTimeseries() !void {
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
+    const gpa = general_purpose_allocator.allocator();
+
     // start with no timeseries data on file
     std.os.unlink("db/dogs.events") catch {};
 
-    const gpa = std.heap.page_allocator;
     std.debug.print("------------------------------------------------\n", .{});
     std.debug.print("\nDogs example - Dogs TableTimeseries boot initial data\n\n", .{});
 
